@@ -89,7 +89,12 @@ Each player object must have:
 `flags` is an array of strings describing off-field concerns. Empty array if none.
 
 ### Player Flags
-Flags are stored directly on each player object in `players.json`. The pipeline is responsible for joining flag data from `flags/` onto players before writing output. An empty `flags: []` means no concerns.
+Flags are stored directly on each player object in `players.json`. The pipeline fetches them live from a Google Sheet at build time and joins them onto players. An empty `flags: []` means no concerns.
+
+**Source:** Google Sheet ID `1PdD1hmkFPRgOJ_lDb4bhieYV4B4hy0zcBsIkDxJAkEs`
+**Parser:** `scripts/parsers/flags_sheet.py` → `fetch_flags()` returns `dict[lowercase_name → list[str]]`
+**Sharing:** Sheet must be set to "Anyone with the link can view" for the CSV export URL to work.
+**Format:** Columns — Date | First Name | Last Name | Team | Incident | Resolution. Multiple rows per player are merged into one flags list.
 
 ---
 
@@ -158,9 +163,11 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 
 1. Python parsers for each data source (`scripts/parsers/`)
 2. Aggregation + VBD scoring logic
-3. Flag join from `flags/` data
-4. `scripts/build.py` orchestration script
-5. `scoring.yaml` config
+3. `scripts/build.py` orchestration script
+4. `scoring.yaml` config
+
+**Done:**
+- `scripts/parsers/flags_sheet.py` — fetches flags live from Google Sheet at build time
 
 ---
 
