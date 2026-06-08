@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Draft Board · 2025</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-left">
+      <h1 class="title">DRAFT<span class="title-accent">BOARD</span></h1>
+      <span class="season-badge">2025</span>
+    </div>
+    <div class="header-right">
+      <div class="pos-filters" id="posFilters">
+        <button class="filter-btn active" data-pos="ALL">ALL</button>
+        <button class="filter-btn qb" data-pos="QB">QB</button>
+        <button class="filter-btn rb" data-pos="RB">RB</button>
+        <button class="filter-btn wr" data-pos="WR">WR</button>
+        <button class="filter-btn te" data-pos="TE">TE</button>
+        <button class="filter-btn flex" data-pos="FLEX">FLEX</button>
+      </div>
+      <label class="hide-toggle">
+        <input type="checkbox" id="hideDrafted">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">HIDE DRAFTED</span>
+      </label>
+      <label class="hide-toggle dv-toggle">
+        <input type="checkbox" id="excludeDV">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">DV LIST</span>
+      </label>
+    </div>
+  </header>
+
+  <div class="subbar">
+    <span id="statAvail" class="subbar-stat">— AVAILABLE</span>
+    <span class="subbar-divider">·</span>
+    <span id="statDrafted" class="subbar-stat muted">— DRAFTED</span>
+    <span class="subbar-hint">click row to expand sources</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="board" id="board">
+      <thead>
+        <tr>
+          <th class="col-rk sortable active asc" data-col="rank">RK<span class="sort-arrow"></span></th>
+          <th class="col-player">PLAYER</th>
+          <th class="col-pos sortable" data-col="position">POS<span class="sort-arrow"></span></th>
+          <th class="col-pts sortable" data-col="projected_points">FPTS<span class="sort-arrow"></span></th>
+          <th class="col-vbd sortable" data-col="vbd">VBD<span class="sort-arrow"></span></th>
+          <th class="col-action"></th>
+        </tr>
+      </thead>
+      <tbody id="playerList"></tbody>
+    </table>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

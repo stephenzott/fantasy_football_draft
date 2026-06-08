@@ -1,0 +1,222 @@
+[
+  {
+    "name": "Christian McCaffrey",
+    "team": "SF",
+    "position": "RB",
+    "rank": 1,
+    "pos_rank": "RB1",
+    "projected_points": 412.3,
+    "vbd": 252.1,
+    "sources": { "espn": 418.2, "yahoo": 405.1, "athletic": 413.6 },
+    "flags": []
+  },
+  {
+    "name": "CeeDee Lamb",
+    "team": "DAL",
+    "position": "WR",
+    "rank": 2,
+    "pos_rank": "WR1",
+    "projected_points": 358.4,
+    "vbd": 188.2,
+    "sources": { "espn": 362.1, "yahoo": 351.8, "athletic": 361.3 },
+    "flags": []
+  },
+  {
+    "name": "Tyreek Hill",
+    "team": "MIA",
+    "position": "WR",
+    "rank": 3,
+    "pos_rank": "WR2",
+    "projected_points": 341.2,
+    "vbd": 171.0,
+    "sources": { "espn": 347.5, "yahoo": 334.2, "athletic": 341.9 },
+    "flags": ["Civil battery lawsuit filed Oct 2023"]
+  },
+  {
+    "name": "Justin Jefferson",
+    "team": "MIN",
+    "position": "WR",
+    "rank": 4,
+    "pos_rank": "WR3",
+    "projected_points": 335.7,
+    "vbd": 165.5,
+    "sources": { "espn": 340.2, "yahoo": 329.4, "athletic": 337.5 },
+    "flags": []
+  },
+  {
+    "name": "Ja'Marr Chase",
+    "team": "CIN",
+    "position": "WR",
+    "rank": 5,
+    "pos_rank": "WR4",
+    "projected_points": 328.1,
+    "vbd": 157.9,
+    "sources": { "espn": 332.4, "yahoo": 321.8, "athletic": 330.1 },
+    "flags": []
+  },
+  {
+    "name": "Josh Allen",
+    "team": "BUF",
+    "position": "QB",
+    "rank": 6,
+    "pos_rank": "QB1",
+    "projected_points": 422.5,
+    "vbd": 142.3,
+    "sources": { "espn": 428.1, "yahoo": 415.7, "athletic": 423.7 },
+    "flags": []
+  },
+  {
+    "name": "Bijan Robinson",
+    "team": "ATL",
+    "position": "RB",
+    "rank": 7,
+    "pos_rank": "RB2",
+    "projected_points": 321.8,
+    "vbd": 161.6,
+    "sources": { "espn": 328.4, "yahoo": 314.2, "athletic": 322.8 },
+    "flags": []
+  },
+  {
+    "name": "Breece Hall",
+    "team": "NYJ",
+    "position": "RB",
+    "rank": 8,
+    "pos_rank": "RB3",
+    "projected_points": 298.4,
+    "vbd": 138.2,
+    "sources": { "espn": 304.1, "yahoo": 291.6, "athletic": 299.5 },
+    "flags": []
+  },
+  {
+    "name": "Travis Kelce",
+    "team": "KC",
+    "position": "TE",
+    "rank": 9,
+    "pos_rank": "TE1",
+    "projected_points": 258.3,
+    "vbd": 138.1,
+    "sources": { "espn": 264.7, "yahoo": 251.2, "athletic": 259.0 },
+    "flags": []
+  },
+  {
+    "name": "Lamar Jackson",
+    "team": "BAL",
+    "position": "QB",
+    "rank": 10,
+    "pos_rank": "QB2",
+    "projected_points": 408.7,
+    "vbd": 128.5,
+    "sources": { "espn": 415.3, "yahoo": 401.2, "athletic": 409.6 },
+    "flags": []
+  },
+  {
+    "name": "De'Von Achane",
+    "team": "MIA",
+    "position": "RB",
+    "rank": 11,
+    "pos_rank": "RB4",
+    "projected_points": 287.6,
+    "vbd": 127.4,
+    "sources": { "espn": 293.2, "yahoo": 280.4, "athletic": 289.2 },
+    "flags": []
+  },
+  {
+    "name": "Amon-Ra St. Brown",
+    "team": "DET",
+    "position": "WR",
+    "rank": 12,
+    "pos_rank": "WR5",
+    "projected_points": 281.3,
+    "vbd": 111.1,
+    "sources": { "espn": 286.7, "yahoo": 274.8, "athletic": 282.4 },
+    "flags": []
+  },
+  {
+    "name": "Jahmyr Gibbs",
+    "team": "DET",
+    "position": "RB",
+    "rank": 13,
+    "pos_rank": "RB5",
+    "projected_points": 274.1,
+    "vbd": 114.0,
+    "sources": { "espn": 279.8, "yahoo": 267.3, "athletic": 275.2 },
+    "flags": []
+  },
+  {
+    "name": "Davante Adams",
+    "team": "NYJ",
+    "position": "WR",
+    "rank": 14,
+    "pos_rank": "WR6",
+    "projected_points": 268.9,
+    "vbd": 98.7,
+    "sources": { "espn": 274.3, "yahoo": 262.6, "athletic": 269.8 },
+    "flags": []
+  },
+  {
+    "name": "Tony Pollard",
+    "team": "TEN",
+    "position": "RB",
+    "rank": 15,
+    "pos_rank": "RB6",
+    "projected_points": 261.4,
+    "vbd": 101.2,
+    "sources": { "espn": 267.8, "yahoo": 254.9, "athletic": 261.5 },
+    "flags": []
+  },
+  {
+    "name": "Patrick Mahomes",
+    "team": "KC",
+    "position": "QB",
+    "rank": 16,
+    "pos_rank": "QB3",
+    "projected_points": 378.4,
+    "vbd": 98.2,
+    "sources": { "espn": 384.2, "yahoo": 371.8, "athletic": 379.2 },
+    "flags": []
+  },
+  {
+    "name": "Puka Nacua",
+    "team": "LAR",
+    "position": "WR",
+    "rank": 17,
+    "pos_rank": "WR7",
+    "projected_points": 251.6,
+    "vbd": 81.4,
+    "sources": { "espn": 257.3, "yahoo": 245.2, "athletic": 252.3 },
+    "flags": []
+  },
+  {
+    "name": "Jalen Hurts",
+    "team": "PHI",
+    "position": "QB",
+    "rank": 18,
+    "pos_rank": "QB4",
+    "projected_points": 362.1,
+    "vbd": 81.9,
+    "sources": { "espn": 368.4, "yahoo": 354.8, "athletic": 363.1 },
+    "flags": []
+  },
+  {
+    "name": "Sam LaPorta",
+    "team": "DET",
+    "position": "TE",
+    "rank": 19,
+    "pos_rank": "TE2",
+    "projected_points": 187.4,
+    "vbd": 67.2,
+    "sources": { "espn": 192.8, "yahoo": 181.3, "athletic": 188.1 },
+    "flags": []
+  },
+  {
+    "name": "Mark Andrews",
+    "team": "BAL",
+    "position": "TE",
+    "rank": 20,
+    "pos_rank": "TE3",
+    "projected_points": 172.8,
+    "vbd": 52.6,
+    "sources": { "espn": 178.4, "yahoo": 166.2, "athletic": 173.8 },
+    "flags": ["Significant ankle injury 2023; durability concern entering 2025"]
+  }
+]
