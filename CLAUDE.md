@@ -16,7 +16,6 @@ The board also surfaces player flags — concerns like domestic violence arrests
 - **Frontend:** Static HTML/CSS/JS (hosted via GitHub Pages)
 - **Draft-day state:** `localStorage` (tracks drafted players client-side, no backend needed)
 - **Version Control / Hosting:** GitHub
-- **Automation:** GitHub Actions (scheduled data pulls)
 
 ---
 
@@ -29,7 +28,7 @@ Rankings/projections are sourced from:
 - FantasyPros
 - Sleeper (free tier)
 
-Pull **season projections** (not pre-built rankings) where possible so they can be normalized to the league's scoring system. Files may be manually downloaded CSVs/XLSX or pulled via API; each source should be parseable by the pipeline without manual editing.
+Rankings/projections are downloaded manually before each draft. Files should be dropped into `data/` and be parseable by the pipeline without manual editing.
 
 ---
 
@@ -142,8 +141,7 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 3. Build aggregation + VBD logic
 4. Build static frontend — display board, sorting, filtering, flags
 5. Add draft day UI — mark drafted players via `localStorage`
-6. Set up GitHub Actions — automate scheduled data pulls
-7. Test full flow — mock a draft day scenario
+6. Test full flow — mock a draft day scenario
 
 ---
 
