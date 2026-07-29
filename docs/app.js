@@ -8,10 +8,91 @@ let hideDrafted = false;
 let excludeDV = false;
 let expanded = new Set();
 let drafted = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+let activePopup = null;
 
 function saveDrafted() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...drafted]));
 }
+
+// --- Flag helpers ---
+
+function conductDotType(flags) {
+  if (flags.some(f => f.toLowerCase().includes('domestic violence'))) return 'dv';
+  return 'other';
+}
+
+function entryType(flagStr) {
+  return flagStr.toLowerCase().includes('domestic violence') ? 'dv' : 'other';
+}
+
+function buildFlagIndicators(p) {
+  const flags = p.flags || [];
+  const injuries = p.injuries || [];
+  let html = '';
+  if (flags.length) {
+    const type = conductDotType(flags);
+    html += `<span class="flag-indicator flag-dot ${type}"></span>`;
+  }
+  if (injuries.length) {
+    html += `<span class="flag-indicator flag-cross">✚</span>`;
+  }
+  return html;
+}
+
+// --- Popup ---
+
+function showFlagPopup(p, anchor) {
+  hidePopup();
+
+  const flags = p.flags || [];
+  const injuries = p.injuries || [];
+  if (!flags.length && !injuries.length) return;
+
+  const popup = document.createElement('div');
+  popup.className = 'flag-popup';
+
+  const conductHtml = flags.map(f => {
+    const type = entryType(f);
+    const sep = f.indexOf(' — ');
+    const incident = sep >= 0 ? f.slice(0, sep) : f;
+    const resolution = sep >= 0 ? f.slice(sep + 3) : '';
+    return `
+      <div class="flag-popup-entry">
+        <div class="flag-popup-incident ${type}">${incident}</div>
+        ${resolution ? `<div class="flag-popup-resolution">${resolution}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const injuryHtml = injuries.map(f => `
+    <div class="flag-popup-entry">
+      <div class="flag-popup-incident injury">&#10010; ${f}</div>
+    </div>`).join('');
+
+  popup.innerHTML = `
+    <div class="flag-popup-name">${p.name}</div>
+    ${conductHtml}${injuryHtml}
+  `;
+
+  document.body.appendChild(popup);
+
+  const rect = anchor.getBoundingClientRect();
+  const pw = 300;
+  let left = rect.left;
+  if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+  let top = rect.bottom + 6;
+  if (top + 200 > window.innerHeight) top = rect.top - 6 - popup.offsetHeight;
+
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+
+  activePopup = popup;
+}
+
+function hidePopup() {
+  if (activePopup) { activePopup.remove(); activePopup = null; }
+}
+
+// ---
 
 function getVisible() {
   let list = allPlayers.filter(p => {
@@ -55,7 +136,9 @@ function render() {
   players.forEach(p => {
     const isDrafted = drafted.has(p.name);
     const isExpanded = expanded.has(p.name);
-    const hasFlags = p.flags && p.flags.length > 0;
+    const flags = p.flags || [];
+    const injuries = p.injuries || [];
+    const hasAnyFlag = flags.length > 0 || injuries.length > 0;
 
     // ── main row ──
     const tr = document.createElement('tr');
@@ -67,7 +150,7 @@ function render() {
       <td>
         <div class="player-name">
           ${p.name}
-          ${hasFlags ? '<span class="flag-dot" title="' + p.flags.map(f => f.replace(/"/g, '&quot;')).join(' | ') + '"></span>' : ''}
+          ${hasAnyFlag ? buildFlagIndicators(p) : ''}
         </div>
         <div class="player-sub">
           <span class="player-team">${p.team}</span>
@@ -84,9 +167,8 @@ function render() {
       </td>
     `;
 
-    // clicking anywhere on row (except the button) toggles expand
     tr.addEventListener('click', e => {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button') || e.target.closest('.flag-indicator')) return;
       toggleExpand(p.name);
     });
 
@@ -95,9 +177,17 @@ function render() {
       toggleDrafted(p.name);
     });
 
+    tr.querySelectorAll('.flag-indicator').forEach(el => {
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        if (activePopup) { hidePopup(); return; }
+        showFlagPopup(p, el);
+      });
+    });
+
     fragment.appendChild(tr);
 
-    // ── detail row ──
+    // ── detail row (projection sources only) ──
     const dr = document.createElement('tr');
     dr.className = `detail-row${isExpanded ? ' open' : ''}`;
     dr.dataset.name = p.name;
@@ -110,15 +200,10 @@ function render() {
         </div>`)
       .join('');
 
-    const flagsHtml = hasFlags
-      ? `<div class="flags-list">${p.flags.map(f => `<div class="flag-item">${f}</div>`).join('')}</div>`
-      : '';
-
     dr.innerHTML = `
       <td colspan="6">
         <div class="detail-inner">
           <div class="sources-grid">${sourcesHtml}</div>
-          ${flagsHtml}
         </div>
       </td>`;
 
@@ -180,6 +265,12 @@ function initFilters() {
     render();
   });
 }
+
+document.addEventListener('click', e => {
+  if (activePopup && !activePopup.contains(e.target) && !e.target.closest('.flag-indicator')) {
+    hidePopup();
+  }
+});
 
 async function init() {
   try {

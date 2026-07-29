@@ -8,25 +8,31 @@ A custom fantasy football draft board that combines season projections from mult
 
 The board also surfaces player flags — concerns like domestic violence arrests or other off-field issues — alongside rankings.
 
+**Multi-league:** Supports 5 leagues from a single codebase — one switchable board, not 5 separate deployments. Every piece of draft-day state (drafted players, live sync) is scoped by `league_id` so two drafts can run simultaneously (e.g. two browser tabs, each pointed at a different league) without state bleeding across leagues. See "Multi-League Support" under Architecture.
+
 ---
 
 ## Tech Stack
 
 - **Backend:** Python
 - **Frontend:** Static HTML/CSS/JS (hosted via GitHub Pages)
-- **Draft-day state:** `localStorage` (tracks drafted players client-side, no backend needed)
+- **Draft-day state:** Firebase Realtime Database (real-time listeners, generous free tier for this scale). Replaces `localStorage`. Schema: `/leagues/{league_id}/drafted/{player_id}` — every read/write scoped by `league_id`, never a flat/global drafted list.
 - **Version Control / Hosting:** GitHub
 
 ---
 
 ## Data Sources
 
-Rankings/projections are downloaded manually before each draft from:
-- ESPN
-- The Athletic
-- Yahoo
-- FantasyPros
-- Sleeper (free tier)
+Rankings/projections are downloaded before each draft from:
+- FantasyPros (free) — direct CSV export
+- Sleeper (free) — API script, no manual download option
+- ESPN — manual copy
+- Yahoo (free) — manual copy
+- The Athletic (paid) — manual copy
+- NFL.com (free) — manual copy; distinct source from ESPN, not a duplicate
+- SI / FantasySports On SI (free) — manual copy
+
+Manual copy/paste is the accepted approach for sources without a clean export; no parser-building planned for those formats at this time.
 
 Files are dropped into `data/` and must be parseable by the pipeline without manual editing.
 
@@ -54,7 +60,50 @@ Files are dropped into `data/` and must be parseable by the pipeline without man
   - Find the baseline player at each position (e.g., 12th RB, 12th WR)
   - VBD = player's projected points − baseline projected points
 
-### 3. Frontend (Static HTML/CSS/JS) — built
+### 3. Multi-League Support — not yet built
+
+**5 leagues total:**
+| League | Platform | Draft mode |
+|---|---|---|
+| League 1 | ESPN (private) | Live — poll ESPN's unofficial API + manual fallback |
+| League 2 | ESPN (private) | Live — poll ESPN's unofficial API + manual fallback |
+| League 3 | ESPN (private) | Live — poll ESPN's unofficial API + manual fallback |
+| League 4 | Offline (non-Sleeper) | Manual only — no API to poll |
+| League 5 | Sleeper | Manual only — drafting offline, so Sleeper's API isn't in play despite being available |
+
+**Design requirements:**
+- One board (`index.html`/`app.js`), league selected via URL param (e.g. `?league=espn_league_a`) — not in-memory-only state, so two tabs can independently point at two different leagues at once.
+- All drafted-state and sync reads/writes scoped by `league_id` — never a flat/global drafted list. This is the guard against state bleeding between simultaneous drafts.
+- Each league likely needs its own `scoring.yaml` (different scoring settings) and its own `players.json` (or one combined file keyed by league) since roster sizes / VBD baselines differ per league.
+- ESPN private leagues require `espn_s2` and `SWID` auth cookies to hit the API. **Decision:** the ESPN-polling script runs locally on Stephen's laptop during the draft (not a cloud function), so cookies live in a local, gitignored `.env` file (`ESPN_S2=...`, `SWID=...`) and never touch the repo, Firebase, or the frontend.
+
+### 4. Leagues Config — not yet built
+A `leagues.yaml` (or `.json`) at the repo root should be the single source of truth for the 5 leagues, e.g.:
+```yaml
+leagues:
+  - id: league_1
+    platform: espn
+    draft_mode: live
+    espn_league_id: <espn numeric league id>
+    scoring_file: scoring_league_1.yaml
+  - id: league_4
+    platform: offline
+    draft_mode: manual
+    scoring_file: scoring_league_4.yaml
+  - id: league_5
+    platform: sleeper
+    draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
+    scoring_file: scoring_league_5.yaml
+```
+The frontend's league selector, the build pipeline, and the ESPN poller should all read from this one file rather than hardcoding league details in multiple places.
+
+### 5. ESPN Live Draft Polling — not yet built
+- For the 3 ESPN leagues only. Polls ESPN's unofficial API (`https://fantasy.espn.com/apis/v3/games/ffl/seasons/{season}/segments/0/leagues/{league_id}?view=mDraftDetail`) on an interval during the draft.
+- Auto-marks players as drafted on the board when they appear in ESPN's draft detail response.
+- Manual "DRAFTED" button remains available alongside polling, as a fallback in case of API lag/failure.
+- Not applicable to the 2 offline leagues (League 4 and League 5/Sleeper) — no live draft room to poll, manual marking only.
+
+### 6. Frontend (Static HTML/CSS/JS) — built, needs multi-league updates
 Files live in `docs/`:
 - `index.html` — page structure
 - `style.css` — dark theme, position color-coding, scanline texture
@@ -82,11 +131,13 @@ Each player object must have:
   "pos_rank": "RB1",
   "projected_points": 412.3,
   "vbd": 252.1,
-  "sources": { "espn": 418.2, "yahoo": 405.1, "athletic": 413.6 },
-  "flags": []
+  "sources": { "fantasypros": 418.2, "sleeper": 405.1, "espn": 413.6, "yahoo": 410.0, "athletic": 415.8, "nfl": 409.2, "si": 411.4 },
+  "flags": [],
+  "injuries": []
 }
 ```
-`flags` is an array of strings describing off-field concerns. Empty array if none.
+- `flags` — conduct/legal concerns, format `"{incident} — {resolution}"`. Empty array if none.
+- `injuries` — injury/availability concerns, plain strings. Empty array if none.
 
 ### Player Flags
 Flags are stored directly on each player object in `players.json`. The pipeline fetches them live from a Google Sheet at build time and joins them onto players. An empty `flags: []` means no concerns.
@@ -116,12 +167,15 @@ rec_td: 6
 
 ## Draft Day Workflow
 
-1. Run `python scripts/build.py` the morning of the draft to regenerate `players.json`
-2. Open `docs/index.html` (or the GitHub Pages URL) in the browser
-3. Optionally toggle "DV LIST" to hide flagged players
-4. As players are taken, click "DRAFTED" — they dim out immediately
-5. Toggle "HIDE DRAFTED" to clear them from view and focus on remaining players
-6. State survives page refreshes via `localStorage` for the duration of the draft
+1. Run `python scripts/build.py` the morning of the draft to regenerate `players.json` for all 5 leagues (reads `leagues.yaml` + each league's `scoring.yaml`)
+2. Open `docs/index.html` (or the GitHub Pages URL), select the correct league from the league selector — the URL updates to `?league={league_id}`
+3. For the 3 ESPN leagues: start the local ESPN-polling script (reads cookies from local `.env`) before the draft begins so picks auto-sync to Firebase
+4. For the 2 offline leagues (League 4, Sleeper League 5): no polling script — mark players manually as they're drafted
+5. Optionally toggle "DV LIST" to hide flagged players
+6. As players are taken, click "DRAFTED" (manual leagues) or let the poller auto-mark them (ESPN leagues) — both write to the same Firebase path, `/leagues/{league_id}/drafted/{player_id}`, so manual clicks work as a fallback on ESPN leagues too
+7. Toggle "HIDE DRAFTED" to clear them from view and focus on remaining players
+8. State syncs live via Firebase across every open tab/device pointed at that `league_id` — no per-device state to lose on refresh
+9. Running two drafts simultaneously: open two tabs, each with a different `?league=` param; each is fully independent
 
 ---
 
@@ -154,6 +208,9 @@ cd docs && python -m http.server 8000
 - `scripts/` — Python data pipeline scripts
 - `scripts/parsers/` — one parser per source, each normalizing to the common schema
 - `flags/` — player flag source data (joined onto players during pipeline build)
+- `leagues.yaml` — single source of truth for the 5 leagues (platform, draft mode, ESPN league ID, scoring file)
+- `scoring_{league_id}.yaml` — one per league (5 total), not a single shared `scoring.yaml`
+- `.env` (gitignored, local only) — ESPN `espn_s2`/`SWID` cookies for the local polling script
 
 When adding a new ranking source, add a dedicated parser in `scripts/parsers/` that normalizes it to the common schema before merging.
 
@@ -164,7 +221,11 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 1. Python parsers for each data source (`scripts/parsers/`)
 2. Aggregation + VBD scoring logic
 3. `scripts/build.py` orchestration script
-4. `scoring.yaml` config
+4. `scoring.yaml` config — one per league (5 total)
+5. Real-time sync backend decision + implementation (replaces `localStorage`)
+6. Multi-league support in frontend (league selector via URL param, league-scoped state)
+7. ESPN live draft polling (3 ESPN leagues) with manual fallback
+8. ESPN auth cookie handling (`espn_s2`, `SWID`) for private leagues
 
 **Done:**
 - `scripts/parsers/flags_sheet.py` — fetches flags live from Google Sheet at build time
