@@ -1,0 +1,30 @@
+leagues:
+  - id: league_1
+    name: "DC Brewnited"
+    platform: espn
+    draft_mode: live
+    espn_league_id: 520090
+    scoring_file: scoring_league_1.yaml
+  - id: league_2
+    name: "The League"
+    platform: espn
+    draft_mode: manual   # ESPN league, but draft happens offline; no polling
+    espn_league_id: 215523
+    scoring_file: scoring_league_2.yaml
+  - id: league_3
+    name: "Family League"
+    platform: espn
+    draft_mode: live
+    espn_league_id: 37313507
+    scoring_file: scoring_league_3.yaml
+  - id: league_4
+    name: "Guillotine"
+    platform: espn
+    draft_mode: live
+    espn_league_id: 873883121
+    scoring_file: scoring_league_4.yaml
+  - id: league_5
+    name: "LA Champions"
+    platform: sleeper
+    draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
+    scoring_file: scoring_league_5.yaml

@@ -1,0 +1,55 @@
+# Sleeper league (LA Champions). Structure differs from the ESPN leagues:
+# no yardage-allowed bonus/penalty exists in Sleeper's scoring, kicking uses
+# finer distance tiers (0-19/20-29/30-39 all worth the same as ESPN's single
+# 0-39 bucket), and Sleeper separates out a "fumble lost" penalty for the
+# offensive player plus dedicated special-teams-player scoring that the
+# ESPN leagues don't break out.
+passing:
+  pass_yd: 0.04
+  pass_td: 4
+  pass_2pt: 2
+  pass_int: -2
+rushing:
+  rush_yd: 0.1
+  rush_td: 6
+  rush_2pt: 2
+receiving:
+  reception: 0.5
+  rec_yd: 0.1
+  rec_td: 6
+  rec_2pt: 2
+misc:
+  fumble_lost: -2        # offensive player who lost the fumble
+  fumble_recovery_td: 6  # any player returning a recovered fumble for a TD
+kicking:
+  fg_0_19: 3
+  fg_20_29: 3
+  fg_30_39: 3
+  fg_40_49: 3
+  fg_50_59: 3
+  fg_60_plus: 6
+  pat_made: 1
+  fg_missed: -1
+  pat_missed: -1
+defense:
+  defense_td: 6
+  sack: 1
+  interception: 2
+  fumble_recovery: 2
+  safety: 2
+  blocked_kick: 2
+  points_allowed:
+    "0": 10
+    "1-6": 7
+    "7-13": 4
+    "14-20": 1
+    "21-27": 0
+    "28-34": 1     # as given by Sleeper; same value as 14-20 tier, verify not a typo
+    "35+": -4
+special_teams_defense:
+  special_teams_td: 6
+  special_teams_fumble_recovery: 2
+special_teams_player:
+  special_teams_player_td: 6
+  forced_fumble: 1
+  fumble_recovery: 1
