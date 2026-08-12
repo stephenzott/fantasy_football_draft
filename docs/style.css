@@ -207,6 +207,31 @@ body::after {
 }
 .subbar-stat.muted { color: var(--text-3); }
 .subbar-divider { color: var(--text-3); font-size: .7rem; }
+
+/* Live-sync status pill. A leading dot (::before) is color-coded per state so
+   connection health is glanceable: green = synced, red = offline/error, amber
+   = Firebase not configured yet. */
+.sync-status {
+  font-family: var(--font-mono);
+  font-size: .62rem;
+  letter-spacing: .1em;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.sync-status::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+.sync-status.connected    { color: var(--rb); }
+.sync-status.connected::before    { background: var(--rb); box-shadow: 0 0 5px var(--rb); }
+.sync-status.disconnected { color: var(--flag-dv); }
+.sync-status.disconnected::before { background: var(--flag-dv); box-shadow: 0 0 5px var(--flag-dv); }
+.sync-status.unconfigured { color: var(--flag-other); }
+.sync-status.unconfigured::before { background: var(--flag-other); box-shadow: 0 0 5px var(--flag-other); }
 .subbar-hint {
   margin-left: auto;
   font-family: var(--font-mono);

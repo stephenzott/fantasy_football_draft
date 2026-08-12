@@ -1,0 +1,17 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "leagues": {
+      "$league_id": {
+        "drafted": {
+          ".read": true,
+          ".write": true,
+          "$player_id": {
+            ".validate": "newData.isBoolean()"
+          }
+        }
+      }
+    }
+  }
+}

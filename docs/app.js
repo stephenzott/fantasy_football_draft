@@ -1,20 +1,37 @@
 // ─────────────────────────────────────────────────────────────────────────
+// Firebase (loaded LAZILY, not statically)
+// ─────────────────────────────────────────────────────────────────────────
+// The Firebase SDK is pulled in via dynamic import() inside initFirebase(),
+// not with a static import at the top of the module, on purpose: that way if
+// the gstatic CDN is unreachable - or Firebase just isn't configured yet -
+// the board degrades to an unsynced view that STILL shows rankings, instead
+// of a blank page (a static top-level import that fails would kill the whole
+// module). Only the local config file is imported statically; it's always
+// present (a committed placeholder until the user fills it in).
+import { firebaseConfig } from "./firebase-config.js";
+
+// ─────────────────────────────────────────────────────────────────────────
 // Multi-league state
 // ─────────────────────────────────────────────────────────────────────────
-// The board serves all 5 leagues from this one page. Which league is active
-// is driven by the ?league= URL param, so two browser tabs can each point at
-// a different league at the same time and stay fully independent. Drafted
-// state is stored per-league in localStorage under a league-scoped key, so
-// marking a player drafted in one league never touches another league.
+// The board serves all 5 leagues from this one page. The active league is
+// driven by the ?league= URL param, so two tabs can each point at a different
+// league independently.
+//
+// Draft-day state lives in Firebase Realtime Database, scoped by league at
+// /leagues/{league_id}/drafted/{player_id}. Firebase is the single source of
+// truth: toggleDrafted only WRITES; the `drafted` Set is rebuilt from the
+// database snapshot by an onValue listener, which then re-renders. (The RTDB
+// SDK applies writes to its local cache and fires the listener immediately,
+// before the server round-trip, so the UI stays instant.)
 
 const SEASON = 2026;
 
-let leagues = [];          // [{id, name}], loaded from docs/leagues.json
+let leagues = [];          // [{id, name}], from docs/leagues.json
 let allLeaguesData = {};   // { league_id: [player, ...] }, from docs/players.json
 let currentLeague = null;  // the active league's id
 
 let allPlayers = [];       // === allLeaguesData[currentLeague]
-let drafted = new Set();   // player_ids drafted in the CURRENT league only
+let drafted = new Set();   // player_ids drafted in the CURRENT league (from Firebase)
 
 let sortCol = 'rank';
 let sortDir = 'asc';
@@ -24,25 +41,85 @@ let excludeDV = false;
 let expanded = new Set();  // player_ids whose source-breakdown row is open
 let activePopup = null;
 
+// ── Firebase handles ──
+let db = null;             // the Realtime Database instance (null if not configured/loaded)
+let fb = null;             // the SDK functions we use { ref, onValue, set, remove }, once loaded
+let unsubscribeDrafted = null;  // teardown fn for the current league's onValue listener
+
+// Whether firebase-config.js holds real values (vs the committed placeholder).
+// Computed synchronously at module load so it's known from the very FIRST
+// render - before the SDK finishes its async load. toggleDrafted relies on
+// this: if we're configured but Firebase hasn't connected yet, a local
+// in-memory pick would be silently wiped by the first snapshot, so we refuse
+// the click instead. A placeholder config makes this false -> intentional
+// ephemeral (in-memory) drafting.
+const firebaseConfigured =
+  !!(firebaseConfig &&
+     typeof firebaseConfig.databaseURL === 'string' &&
+     firebaseConfig.databaseURL &&
+     !firebaseConfig.databaseURL.includes('PASTE'));
+
 // ─────────────────────────────────────────────────────────────────────────
-// League-scoped persistence
+// Firebase wiring
 // ─────────────────────────────────────────────────────────────────────────
-// storageKey() MUST be recomputed from the current league every time it's
-// read or written - never captured once at module load. If it were captured
-// once, switching leagues in-tab would keep reading/writing the previous
-// league's key, which is exactly the cross-league state bleed this whole
-// feature is meant to prevent.
-function storageKey() {
-  return 'draftboard_v1_drafted_' + currentLeague;
-}
-function loadDrafted() {
-  drafted = new Set(JSON.parse(localStorage.getItem(storageKey()) || '[]'));
-}
-function saveDrafted() {
-  localStorage.setItem(storageKey(), JSON.stringify([...drafted]));
+
+// Set the little sync-status pill in the subbar. State is one of:
+// 'connected' (green), 'disconnected' (red), 'unconfigured' (amber), 'error'.
+function setSyncStatus(state) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const label = {
+    connected: 'SYNCED',
+    disconnected: 'OFFLINE',
+    unconfigured: 'NOT SYNCED',
+    error: 'SYNC ERROR',
+  }[state] || '';
+  // The CSS class drives the dot color; 'error' reuses the disconnected red.
+  el.className = 'sync-status ' + (state === 'error' ? 'disconnected' : state);
+  el.textContent = label;
 }
 
-// --- Flag helpers ---
+// Initialize Firebase IF the config has been filled in. Until firebase-config.js
+// has a real databaseURL (the placeholder still contains "PASTE"), we leave db
+// null and run in an unsynced, in-memory-only mode - clearly flagged in the
+// status pill rather than silently pretending to sync. Async because it
+// dynamically imports the SDK; awaited by init() before the drafted listener
+// is attached.
+async function initFirebase() {
+  if (!firebaseConfigured) {
+    db = null;
+    setSyncStatus('unconfigured');
+    return;
+  }
+
+  try {
+    // Lazy-load the modular SDK from the gstatic CDN only when we actually
+    // have a config to use it with.
+    const [appMod, dbMod] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"),
+    ]);
+    const app = appMod.initializeApp(firebaseConfig);
+    db = dbMod.getDatabase(app);
+    fb = { ref: dbMod.ref, onValue: dbMod.onValue, set: dbMod.set, remove: dbMod.remove };
+    // Firebase's built-in connection state - flips the status pill live as the
+    // connection drops/recovers, so a draft-day outage is visible, not silent.
+    fb.onValue(fb.ref(db, '.info/connected'), snap => {
+      setSyncStatus(snap.val() ? 'connected' : 'disconnected');
+    });
+  } catch (err) {
+    // A CDN failure or bad config shouldn't blank the board - fall back to
+    // unsynced mode (rankings still render, picks are ephemeral).
+    console.error('Firebase init failed:', err);
+    db = null;
+    fb = null;
+    setSyncStatus('error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Flag helpers
+// ─────────────────────────────────────────────────────────────────────────
 
 function conductDotType(flags) {
   if (flags.some(f => f.toLowerCase().includes('domestic violence'))) return 'dv';
@@ -67,7 +144,9 @@ function buildFlagIndicators(p) {
   return html;
 }
 
-// --- Popup ---
+// ─────────────────────────────────────────────────────────────────────────
+// Flag popup
+// ─────────────────────────────────────────────────────────────────────────
 
 function showFlagPopup(p, anchor) {
   hidePopup();
@@ -120,7 +199,9 @@ function hidePopup() {
   if (activePopup) { activePopup.remove(); activePopup = null; }
 }
 
-// ---
+// ─────────────────────────────────────────────────────────────────────────
+// Rendering
+// ─────────────────────────────────────────────────────────────────────────
 
 function getVisible() {
   let list = allPlayers.filter(p => {
@@ -163,8 +244,7 @@ function render() {
 
   players.forEach(p => {
     // Identity is the pipeline-minted player_id (Firebase-safe, stable across
-    // rebuilds), not the display name - so the same person is tracked
-    // consistently and the upcoming Firebase sync can reuse the same key.
+    // rebuilds) - the same key used for the Firebase drafted path.
     const isDrafted = drafted.has(p.player_id);
     const isExpanded = expanded.has(p.player_id);
     const flags = p.flags || [];
@@ -252,12 +332,38 @@ function toggleExpand(id) {
   render();
 }
 
+// Toggle a player's drafted state. With Firebase configured this only WRITES;
+// the onValue listener (set up in setActiveLeague) rebuilds `drafted` and
+// re-renders - one direction of truth, so we never mutate `drafted` here and
+// risk a later snapshot silently reverting it. Without Firebase we fall back
+// to an ephemeral in-memory toggle (clearly flagged NOT SYNCED in the pill).
 function toggleDrafted(id) {
-  if (drafted.has(id)) drafted.delete(id);
-  else drafted.add(id);
-  saveDrafted();
-  render();
+  if (db && fb) {
+    // Firebase is up: write only; the onValue listener updates `drafted` and
+    // re-renders (fires immediately from local cache, so the UI stays instant).
+    const node = fb.ref(db, `leagues/${currentLeague}/drafted/${id}`);
+    if (drafted.has(id)) fb.remove(node);   // undo
+    else fb.set(node, true);                // draft
+  } else if (firebaseConfigured) {
+    // Configured, but Firebase hasn't connected yet (still loading) or errored
+    // out. Do NOT mutate a local set here: during the load window the first
+    // snapshot would wipe the pick (silent loss), and after an error we're in
+    // hard-replace mode with no local store to fall back to. Ignore the click
+    // - the row visibly doesn't change and the status pill shows why. A pick
+    // that doesn't register beats one that registers and then vanishes.
+    return;
+  } else {
+    // No Firebase configured at all: ephemeral in-memory drafting (clearly
+    // flagged NOT SYNCED). Lost on refresh - that's the unconfigured mode.
+    if (drafted.has(id)) drafted.delete(id);
+    else drafted.add(id);
+    render();
+  }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Sorting / filters
+// ─────────────────────────────────────────────────────────────────────────
 
 function initSorting() {
   document.querySelectorAll('th.sortable').forEach(th => {
@@ -314,16 +420,38 @@ function updateTitle() {
   document.title = (lg ? lg.name : 'Draft Board') + ' · ' + SEASON;
 }
 
-// Point the board at a league: swap in that league's players, reload its
-// (separate) drafted set, reset any open detail rows, and retitle the tab.
-// Sort column, position filter, and the toggles are intentionally left as-is
-// so they persist across a league switch.
+// (Re)subscribe the Firebase drafted listener to the CURRENT league's path.
+// Called on a league switch and again once Firebase finishes loading (it comes
+// up asynchronously, after the first board render).
+//
+// Tearing down the previous listener first is essential: if we subscribed to
+// league_1's drafted node and never unsubscribed, switching to league_2 would
+// leave the old listener still writing league_1's data into `drafted` - the
+// exact cross-league bleed the multi-league design prevents, reintroduced via
+// a stale listener.
+function attachDraftedListener() {
+  if (unsubscribeDrafted) { unsubscribeDrafted(); unsubscribeDrafted = null; }
+  if (!db || !fb) return;  // unsynced mode: nothing to subscribe
+
+  const draftedRef = fb.ref(db, `leagues/${currentLeague}/drafted`);
+  unsubscribeDrafted = fb.onValue(draftedRef, snap => {
+    // Snapshot is { player_id: true, ... } (or null when nothing drafted).
+    // Rebuild `drafted` wholesale from it - Firebase is the source of truth.
+    drafted = new Set(Object.keys(snap.val() || {}));
+    render();
+  });
+}
+
+// Point the board at a league: swap in that league's players and re-subscribe
+// the drafted listener. Sort/filter/toggles are intentionally left as-is so
+// they persist across a switch.
 function setActiveLeague(id) {
   currentLeague = id;
   allPlayers = allLeaguesData[id] || [];  // guard: unknown id -> empty board, not a crash
-  loadDrafted();       // load THIS league's drafted player_ids
-  expanded = new Set(); // don't carry an expanded row over from the old league
+  expanded = new Set();                    // don't carry an expanded row across leagues
+  drafted = new Set();                     // reset; the listener repopulates from Firebase
   updateTitle();
+  attachDraftedListener();
 }
 
 function initLeagueSelect() {
@@ -345,9 +473,8 @@ function initLeagueSelect() {
 
 async function init() {
   try {
-    // Fetch both files once, up front. players.json holds ALL leagues, so
-    // switching leagues later just re-indexes what's already in memory - no
-    // re-fetch needed.
+    // Fetch both data files once. players.json holds ALL leagues, so switching
+    // leagues later just re-indexes what's already in memory - no re-fetch.
     const [leaguesRes, playersRes] = await Promise.all([
       fetch('leagues.json'),
       fetch('players.json'),
@@ -369,10 +496,10 @@ async function init() {
     return;
   }
 
-  // Resolve the active league from ?league=, validated against the known ids.
-  // A missing or unknown value falls back to the first league AND is written
-  // back into the URL, so the tab is never left in an ambiguous state (and a
-  // bad ?league= shows an empty board rather than throwing on undefined).
+  // Resolve the active league from ?league=, validated against known ids. A
+  // missing/unknown value falls back to the first league AND is written back
+  // into the URL, so the tab is never ambiguous (and a bad ?league= shows an
+  // empty board rather than throwing on undefined).
   const validIds = new Set(leagues.map(l => l.id));
   let requested = new URLSearchParams(location.search).get('league');
   if (!requested || !validIds.has(requested)) {
@@ -382,11 +509,18 @@ async function init() {
     history.replaceState(null, '', url);
   }
 
+  // Render the board immediately (unsynced) so rankings are never blocked on
+  // Firebase loading. Firebase then comes up in the background; when it's
+  // ready, attachDraftedListener() subscribes the current league and the
+  // drafted state streams in and re-renders.
   setActiveLeague(requested);
   initLeagueSelect();
   initSorting();
   initFilters();
   render();
+
+  await initFirebase();
+  attachDraftedListener();
 }
 
 init();

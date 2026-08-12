@@ -46,6 +46,10 @@
     <span id="statAvail" class="subbar-stat">— AVAILABLE</span>
     <span class="subbar-divider">·</span>
     <span id="statDrafted" class="subbar-stat muted">— DRAFTED</span>
+    <span class="subbar-divider">·</span>
+    <!-- Live sync status: SYNCED (green) / OFFLINE (red) / NOT SYNCED (amber,
+         when Firebase isn't configured). Set by app.js. -->
+    <span id="syncStatus" class="sync-status">…</span>
     <span class="subbar-hint">click row to expand sources</span>
   </div>
 
@@ -65,6 +69,9 @@
     </table>
   </div>
 
-  <script src="app.js"></script>
+  <!-- app.js is an ES module: it imports the Firebase modular SDK from the
+       gstatic CDN and the config from firebase-config.js. Module scripts are
+       deferred, so the DOM is ready by the time it runs. -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
