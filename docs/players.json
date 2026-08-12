@@ -6364,7 +6364,7 @@
     {
       "player_id": "miles-kitselman-te",
       "name": "Miles Kitselman",
-      "team": "DET",
+      "team": null,
       "position": "TE",
       "projected_points": 31.6,
       "sources": {
@@ -6503,7 +6503,7 @@
     {
       "player_id": "aaron-anderson-wr",
       "name": "Aaron Anderson",
-      "team": "CLE",
+      "team": null,
       "position": "WR",
       "projected_points": 30.2,
       "sources": {
@@ -18409,7 +18409,7 @@
     {
       "player_id": "aaron-anderson-wr",
       "name": "Aaron Anderson",
-      "team": "CLE",
+      "team": null,
       "position": "WR",
       "projected_points": 19.2,
       "sources": {
@@ -18519,7 +18519,7 @@
     {
       "player_id": "miles-kitselman-te",
       "name": "Miles Kitselman",
-      "team": "DET",
+      "team": null,
       "position": "TE",
       "projected_points": 18.6,
       "sources": {
@@ -29846,7 +29846,7 @@
     {
       "player_id": "miles-kitselman-te",
       "name": "Miles Kitselman",
-      "team": "DET",
+      "team": null,
       "position": "TE",
       "projected_points": 31.6,
       "sources": {
@@ -29985,7 +29985,7 @@
     {
       "player_id": "aaron-anderson-wr",
       "name": "Aaron Anderson",
-      "team": "CLE",
+      "team": null,
       "position": "WR",
       "projected_points": 30.2,
       "sources": {
@@ -41758,7 +41758,7 @@
     {
       "player_id": "miles-kitselman-te",
       "name": "Miles Kitselman",
-      "team": "DET",
+      "team": null,
       "position": "TE",
       "projected_points": 25.1,
       "sources": {
@@ -41811,7 +41811,7 @@
     {
       "player_id": "aaron-anderson-wr",
       "name": "Aaron Anderson",
-      "team": "CLE",
+      "team": null,
       "position": "WR",
       "projected_points": 24.7,
       "sources": {
@@ -53480,7 +53480,7 @@
     {
       "player_id": "miles-kitselman-te",
       "name": "Miles Kitselman",
-      "team": "DET",
+      "team": null,
       "position": "TE",
       "projected_points": 25.1,
       "sources": {
@@ -53552,7 +53552,7 @@
     {
       "player_id": "aaron-anderson-wr",
       "name": "Aaron Anderson",
-      "team": "CLE",
+      "team": null,
       "position": "WR",
       "projected_points": 24.7,
       "sources": {

@@ -91,6 +91,34 @@ body::after {
   border-radius: 2px;
 }
 
+/* League selector. `appearance: none` strips the OS-native styling (which
+   would otherwise render light-on-light and ignore our theme); we then draw
+   our own down-caret with an inline SVG background image so it still reads
+   as a dropdown. The SVG is a data URI so there's no external request. */
+.league-select {
+  font-family: var(--font-display);
+  font-size: .95rem;
+  letter-spacing: .06em;
+  color: var(--text);
+  background-color: var(--surface-3);
+  border: 1px solid var(--border-hi);
+  border-radius: 2px;
+  padding: 4px 26px 4px 10px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  /* down-caret, drawn in --text-2 (#5d7a93), pinned to the right edge */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235d7a93' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  transition: border-color .12s, color .12s;
+}
+.league-select:hover { border-color: var(--accent); color: var(--accent); }
+.league-select:focus { outline: none; border-color: var(--accent); }
+/* The dropdown list items are OS-rendered; force a dark background so the
+   open list isn't white-on-white in browsers that honor these. */
+.league-select option { background: var(--surface-2); color: var(--text); }
+
 .header-right {
   display: flex;
   align-items: center;

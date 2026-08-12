@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Draft Board · 2025</title>
+  <title>Draft Board · 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -14,7 +14,11 @@
   <header class="header">
     <div class="header-left">
       <h1 class="title">DRAFT<span class="title-accent">BOARD</span></h1>
-      <span class="season-badge">2025</span>
+      <span class="season-badge">2026</span>
+      <!-- League selector: options are filled in by app.js from
+           docs/leagues.json (which build.py generates from leagues.yaml),
+           so the league list never gets hardcoded here. -->
+      <select id="leagueSelect" class="league-select" aria-label="League"></select>
     </div>
     <div class="header-right">
       <div class="pos-filters" id="posFilters">
