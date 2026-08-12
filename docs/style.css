@@ -125,6 +125,30 @@ body::after {
   gap: 20px;
 }
 
+/* Name search box */
+.search-box {
+  font-family: var(--font-ui);
+  font-size: .82rem;
+  letter-spacing: .04em;
+  color: var(--text);
+  background: var(--surface-3);
+  border: 1px solid var(--border-hi);
+  border-radius: 2px;
+  padding: 6px 11px;
+  width: 190px;
+  transition: border-color .12s, width .15s;
+}
+.search-box::placeholder {
+  color: var(--text-3);
+  font-family: var(--font-display);
+  letter-spacing: .1em;
+}
+.search-box:focus {
+  outline: none;
+  border-color: var(--accent);
+  width: 230px;  /* grows a touch on focus so long names have room */
+}
+
 /* Position filters */
 .pos-filters { display: flex; gap: 4px; }
 

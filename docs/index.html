@@ -21,6 +21,11 @@
       <select id="leagueSelect" class="league-select" aria-label="League"></select>
     </div>
     <div class="header-right">
+      <!-- Name search: filters the visible rows by player name, ANDed with the
+           position filter and toggles below (handled in app.js getVisible()). -->
+      <input type="search" id="searchBox" class="search-box"
+             placeholder="SEARCH PLAYER…" aria-label="Search players by name"
+             autocomplete="off" spellcheck="false">
       <div class="pos-filters" id="posFilters">
         <button class="filter-btn active" data-pos="ALL">ALL</button>
         <button class="filter-btn qb" data-pos="QB">QB</button>

@@ -38,6 +38,7 @@ let sortDir = 'asc';
 let posFilter = 'ALL';
 let hideDrafted = false;
 let excludeDV = false;
+let searchTerm = '';       // lowercased name-search text; '' = no search
 let expanded = new Set();  // player_ids whose source-breakdown row is open
 let activePopup = null;
 
@@ -205,6 +206,8 @@ function hidePopup() {
 
 function getVisible() {
   let list = allPlayers.filter(p => {
+    // Name search ANDs with the other filters (search within the current view).
+    if (searchTerm && !p.name.toLowerCase().includes(searchTerm)) return false;
     if (posFilter === 'FLEX' && !['RB', 'WR', 'TE'].includes(p.position)) return false;
     if (posFilter !== 'ALL' && posFilter !== 'FLEX' && p.position !== posFilter) return false;
     if (hideDrafted && drafted.has(p.player_id)) return false;
@@ -400,6 +403,21 @@ function initFilters() {
   document.getElementById('excludeDV').addEventListener('change', e => {
     excludeDV = e.target.checked;
     render();
+  });
+
+  const searchBox = document.getElementById('searchBox');
+  searchBox.addEventListener('input', e => {
+    searchTerm = e.target.value.trim().toLowerCase();
+    render();
+  });
+  // Escape clears the search quickly (the input's native clear button also
+  // fires 'input', so that path is already handled above).
+  searchBox.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      e.target.value = '';
+      searchTerm = '';
+      render();
+    }
   });
 }
 
