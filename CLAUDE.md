@@ -283,15 +283,17 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 
 ## What's Left to Build
 
-1. Aggregation + VBD scoring logic
-2. `scripts/build.py` orchestration script
-3. All 5 `scoring_league_X.yaml` files exist. `scoring_league_3.yaml` is a **placeholder** (copied from league_1) — replace with Family League's real ESPN settings before draft day.
-4. Real-time sync backend decision + implementation (replaces `localStorage`)
-5. Multi-league support in frontend (league selector via URL param, league-scoped state)
-6. ESPN live draft polling (3 ESPN leagues) with manual fallback
-7. ESPN auth cookie handling (`espn_s2`, `SWID`) for private leagues — note this is a separate concern from the one-time projections pull above: draft-day polling needs a persistent local `.env`, the projections pull was a one-time transient fetch
+1. Real-time sync backend decision + implementation (replaces `localStorage`)
+2. Multi-league support in frontend (league selector via URL param, league-scoped state) — **now required to run the board:** the pipeline writes a combined `docs/players.json` keyed by `league_id` (`{"league_1": [...], ...}`), but `docs/app.js` still `fetch`es a flat array. Update the frontend to read the selected league out of the combined object via `?league=`.
+3. ESPN live draft polling (3 ESPN leagues) with manual fallback
+4. ESPN auth cookie handling (`espn_s2`, `SWID`) for private leagues — note this is a separate concern from the one-time projections pull above: draft-day polling needs a persistent local `.env`, the projections pull was a one-time transient fetch
 
 **Done:**
+- `scripts/scoring.py` — converts a player's raw `projected_stats` to fantasy points under one league's scoring; maps `reception` (scoring key) → `rec` (parser stat key) explicitly, and raises on any unmapped scoring key. 2pt conversions + `fumble_lost` intentionally unscored in v1 (only some sources emit them; scoring them would make the same player differ across leagues for non-scoring reasons).
+- `scripts/merge.py` — normalizes names (accent/punctuation/suffix stripping + a `NAME_ALIASES` table for nicknames), mints a Firebase-safe `player_id`, merges the 5 scoring-eligible sources into one row per player (majority-vote team/position), joins flags, and prints a **match report** (source-count per player; 1-source players flagged as likely normalization misses). SI excluded — its combined-only stats can't be scored.
+- `scripts/aggregate.py` — per league: scores each source then averages → `projected_points`, ranks overall + positionally, computes VBD vs a positional baseline. Baseline rank = `teams × starters[pos] + teams × FLEX × FLEX_SPLIT[pos]` with `FLEX_SPLIT = {RB:0.50, WR:0.35, TE:0.15}`.
+- `scripts/build.py` — orchestrates: parse 6 sources + flags once (network fetches happen once, outside the per-league loop), merge, then per league score/rank/VBD → combined `docs/players.json`. Run `python scripts/build.py`. **Requires network** (Sleeper + flags sheet fetch live).
+- `leagues.yaml` `roster` blocks — per-league `teams` + `starters` (QB/RB/WR/TE/FLEX), the source for VBD baselines.
 - `scripts/parsers/flags_sheet.py` — fetches flags live from Google Sheet at build time
 - `scripts/parsers/athletic.py` — parses The Athletic's 4-block side-by-side CSV export
 - `scripts/parsers/fantasypros.py` — parses FantasyPros' 4 per-position CSV exports (QB/RB/WR/TE; K/DST/FLX intentionally not parsed)
@@ -302,7 +304,7 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 - `leagues.yaml` — single source of truth for all 5 leagues (id, name, platform, draft_mode, espn_league_id, scoring_file)
 - `scoring_league_1.yaml` (DC Brewnited, ESPN) — full PPR, pass_int -2
 - `scoring_league_2.yaml` (The League, ESPN) — standard/no PPR, pass_int -2
-- `scoring_league_3.yaml` (Family League, ESPN) — **placeholder**, copied from league_1
+- `scoring_league_3.yaml` (Family League, ESPN) — full PPR, pass_int -2; FG 60+ = 6, no yards-allowed bonus, adds misc fumble-lost/fumble-recovery-TD
 - `scoring_league_4.yaml` (Guillotine, ESPN) — half-PPR, pass_int -1, no FG-missed penalty
 - `scoring_league_5.yaml` (LA Champions, Sleeper) — half-PPR; structurally different from the ESPN leagues (no yards-allowed bonus, adds fumble_lost penalty, separate special-teams-player scoring)
 

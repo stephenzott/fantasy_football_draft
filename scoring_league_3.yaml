@@ -1,5 +1,9 @@
-# PLACEHOLDER — copied from scoring_league_1.yaml (DC Brewnited) pending
-# Family League's real ESPN scoring settings. Replace before draft day.
+# Family League (ESPN). Full PPR.
+# Notes on this league's settings:
+#   - no yards-allowed bonus (section omitted entirely)
+#   - ESPN lists NO 22-27 points-allowed bucket (jumps from 18-21 straight to
+#     28-34) — recorded exactly as shown
+#   - misc section captures Total Fumbles Lost / Fumble Recovered for TD
 passing:
   pass_yd: 0.04
   pass_td: 4
@@ -14,13 +18,16 @@ receiving:
   rec_yd: 0.1
   rec_td: 6
   rec_2pt: 2
+misc:
+  fumble_lost: -2         # offensive player who lost the fumble (FUML)
+  fumble_recovery_td: 6   # any player returning a recovered fumble for a TD (FTD)
 kicking:
   pat_made: 1
   fg_missed: -1
   fg_0_39: 3
   fg_40_49: 4
   fg_50_59: 5
-  fg_60_plus: 5
+  fg_60_plus: 6
 defense_special_teams:
   kickoff_return_td: 6
   punt_return_td: 6
@@ -35,21 +42,13 @@ defense_special_teams:
   fumble_recovery: 2
   safety: 2
   points_allowed:
-    "0": 5
-    "1-6": 4
-    "7-13": 3
-    "14-17": 1
-    "18-27": 0
+    "0": 11
+    "1-6": 10
+    "7-13": 8
+    "14-17": 5
+    "18-21": 2
+    # note: ESPN lists no 22-27 tier for this league
     "28-34": -1
     "35-45": -3
     "46+": -5
-  yards_allowed:
-    "<100": 5
-    "100-199": 3
-    "200-299": 2
-    "300-349": 0
-    "350-399": -1
-    "400-449": -3
-    "450-499": -5
-    "500-549": -6
-    "550+": -7
+  # note: this league has NO yards-allowed bonus (unlike league_1)

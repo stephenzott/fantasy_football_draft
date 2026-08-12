@@ -5,26 +5,69 @@ leagues:
     draft_mode: live
     espn_league_id: 520090
     scoring_file: scoring_league_1.yaml
+    roster:
+      teams: 10
+      starters:
+        QB: 1
+        RB: 2
+        WR: 2
+        TE: 1
+        FLEX: 1
   - id: league_2
     name: "The League"
     platform: espn
     draft_mode: manual   # ESPN league, but draft happens offline; no polling
     espn_league_id: 215523
     scoring_file: scoring_league_2.yaml
+    roster:
+      teams: 8
+      starters:
+        QB: 1
+        RB: 2
+        WR: 2
+        TE: 1
+        FLEX: 1
   - id: league_3
     name: "Family League"
     platform: espn
     draft_mode: live
     espn_league_id: 37313507
     scoring_file: scoring_league_3.yaml
+    roster:
+      teams: 12
+      starters:
+        QB: 1
+        RB: 2
+        WR: 2
+        TE: 1
+        FLEX: 1
   - id: league_4
     name: "Guillotine"
     platform: espn
     draft_mode: live
     espn_league_id: 873883121
     scoring_file: scoring_league_4.yaml
+    # Guillotine is an 18-team survivor format but still uses a conventional
+    # starting lineup, so VBD is computed the same way as the other leagues -
+    # just with a much deeper baseline because of the 18 teams.
+    roster:
+      teams: 18
+      starters:
+        QB: 1
+        RB: 2
+        WR: 2
+        TE: 1
+        FLEX: 1
   - id: league_5
     name: "LA Champions"
     platform: sleeper
     draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
     scoring_file: scoring_league_5.yaml
+    roster:
+      teams: 12
+      starters:
+        QB: 1
+        RB: 2
+        WR: 2
+        TE: 1
+        FLEX: 1
