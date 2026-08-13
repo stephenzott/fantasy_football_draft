@@ -24,7 +24,7 @@ from scoring import score_stats
 # position - it adds a fractional share. These shares reflect that RBs fill
 # FLEX most often, then WRs, then TEs. They sum to 1.0. (Surfaced as a
 # tunable because it's a modeling choice, not a hard rule.)
-FLEX_SPLIT = {"RB": 0.50, "WR": 0.35, "TE": 0.15}
+FLEX_SPLIT = {"RB": 0.50, "WR": 0.40, "TE": 0.10}
 
 # Positions the board ranks. QB is never FLEX-eligible in these leagues (no
 # superflex/2QB), so QB gets no FLEX share.
