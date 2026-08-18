@@ -5,11 +5,15 @@ into the ranked, VBD-scored rows the board consumes.
 For one league this does three things:
   1. Score each source's stats under the league's scoring, then average
      those per-source point totals into one projected_points per player.
-  2. Rank players overall by projected_points and assign a positional rank
-     ("RB1", "RB2", ...).
+  2. Assign a positional rank ("RB1", "RB2", ...) by projected_points within
+     each position.
   3. Compute Value-Based Drafting (VBD): projected_points minus the points
      of the "baseline" player at that position - the last player expected
-     to be a startable starter across the whole league.
+     to be a startable starter across the whole league. Overall `rank` is
+     then assigned by VBD (not raw points) - VBD is the actual "who should
+     go first" number; ranking on raw points alone would over-favor QBs
+     (a deep position where even mediocre starters score a lot) over
+     scarcer RB/WR/TE options.
 
 VBD baseline math is the mathematically interesting part, so it's spelled
 out in compute_baselines().
@@ -103,7 +107,7 @@ def aggregate_league(merged: list[dict], scoring: dict[str, float], roster: dict
             "injuries": [],  # no injuries data source exists yet; always empty
         })
 
-    # --- Step 2: one canonical ordering drives rank, pos_rank, AND VBD ---
+    # --- Step 2: a points-sorted ordering drives pos_rank AND the VBD baseline ---
     # Sort by projected points high-to-low, breaking ties by name. The name
     # tiebreaker matters: projected_points is rounded to 1 decimal, so exact
     # ties are common, and Python's sort is stable - without a tiebreaker,
@@ -113,15 +117,14 @@ def aggregate_league(merged: list[dict], scoring: dict[str, float], roster: dict
     # name makes every build deterministic.
     scored.sort(key=lambda p: (-p["projected_points"], p["name"]))
 
-    # Overall rank in that canonical order: best projected points = rank 1.
-    for i, p in enumerate(scored, start=1):
-        p["rank"] = i
-
-    # Positional rank ("RB1", "RB2", ...) in the SAME order. We also keep each
+    # Positional rank ("RB1", "RB2", ...) in that order. We also keep each
     # position's players in this order (by_position) so the VBD baseline is
     # read from the identical ordering - i.e. the player labeled "RB30" is
     # exactly the player whose points define the RB baseline, with no risk of
-    # a separately-sorted list disagreeing.
+    # a separately-sorted list disagreeing. Note: within a single position,
+    # points-order and VBD-order are identical (VBD is just points minus a
+    # constant baseline for that position), so this ordering is unaffected by
+    # Step 4 switching the OVERALL rank to be VBD-based below.
     by_position: dict[str, list[dict]] = {}
     for p in scored:
         bucket = by_position.setdefault(p["position"], [])
@@ -144,5 +147,15 @@ def aggregate_league(merged: list[dict], scoring: dict[str, float], roster: dict
         baseline_pts = players[idx]["projected_points"]
         for p in players:
             p["vbd"] = round(p["projected_points"] - baseline_pts, 1)
+
+    # --- Step 4: overall rank reflects VBD, not raw points ---
+    # Raw points alone over-favors QBs (a deep position where even mediocre
+    # starters score a lot) over scarcer RB/WR/TE options with far more value
+    # above replacement. VBD is the "who should actually go first" number, so
+    # that's what the board's default rank/sort should reflect. Same name
+    # tiebreak as Step 2, for the same determinism reason.
+    scored.sort(key=lambda p: (-p["vbd"], p["name"]))
+    for i, p in enumerate(scored, start=1):
+        p["rank"] = i
 
     return scored
