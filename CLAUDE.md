@@ -26,10 +26,28 @@ The board also surfaces player flags — concerns like domestic violence arrests
 Rankings/projections are downloaded before each draft from (NFL.com dropped as a source - their fantasy projections are now powered by ESPN, so it would just be a duplicate of the ESPN source below):
 - FantasyPros (free) — direct CSV export
 - Sleeper (free) — no manual download option; `scripts/parsers/sleeper.py` fetches live season projections from Sleeper's public read API at build time (no login/API key needed), the same live-fetch pattern as `scripts/parsers/flags_sheet.py`. Unlike ESPN, Sleeper's stat fields already have clear, human-readable names, so no empirical ID-mapping was needed. Note: this is a different use of Sleeper's API than League 5's live draft (see Multi-League Support below) - that one stays manual regardless.
-- ESPN — no clean export or copyable table (JS-rendered projections page); pulled from ESPN's own internal fantasy API instead. This requires a real logged-in browser session's cookies (grabbed via DevTools "Copy as cURL"), used once to fetch a raw JSON snapshot into `data/espn/` - the cookies/auth tokens themselves are never written to any file in this repo, only the resulting player data. Since ESPN's stat fields are opaque numeric IDs with no documented mapping, `scripts/parsers/espn.py`'s `STAT_ID_MAP`/`TEAM_ID_MAP` were derived empirically by cross-checking known players' values against Athletic/FantasyPros/CBS, not from ESPN docs - re-derive the same way if ESPN ever changes these IDs.
+- ESPN — no clean export or copyable table (JS-rendered projections page); pulled from ESPN's own internal fantasy API instead. This requires a real logged-in browser session's cookies (grabbed via DevTools "Copy as cURL"), used once to fetch a raw JSON snapshot into `data/espn/` - the cookies/auth tokens themselves are never written to any file in this repo, only the resulting player data. Since ESPN's stat fields are opaque numeric IDs with no documented mapping, `scripts/parsers/espn.py`'s `STAT_ID_MAP`/`TEAM_ID_MAP` were derived empirically by cross-checking known players' values against Athletic/FantasyPros/CBS, not from ESPN docs - re-derive the same way if ESPN ever changes these IDs. See "ESPN Projections Refresh" below for the exact manual steps.
 - CBS Sports (free) — manual copy; replaces Yahoo, which doesn't offer full stat projections
 - The Athletic (paid) — manual copy
 - SI / FantasySports On SI (free) — manual copy
+
+### ESPN Projections Refresh (manual steps, re-derived 2026-08-18)
+
+`scripts/parsers/espn.py` expects `data/espn/espn_player_projections_2026.json` to be a **flat JSON array** of ~1,000+ entries, each shaped like `{"player": {..., "stats": [{"id": "10<season>", "stats": {...}}, ...]}, "ratings": ..., ...}`. Getting that exact shape out of ESPN's API takes a few non-obvious steps:
+
+1. Log into ESPN Fantasy in Chrome with an account that has access to your leagues, open any league, and go to the **Players** tab. Switch it to a view that shows **projected stats/points** (not just a bio list) — the stats-bearing request only fires once the page needs stat data.
+2. Open DevTools → **Network** tab, and filter requests using the box at the top for `kona_player_info`. This isolates the right endpoint from ESPN's many similar-looking `players`-related requests (there's also a lightweight bio-only endpoint and a paginated free-agent-search endpoint that both look plausible but lack what's needed).
+3. Click the matching request → **Headers** tab → **Request Headers** → find `x-fantasy-filter`. Its value is a JSON string containing `"limit":50` (or similar) — this caps the response to 50 players. This header has no auth/cookies in it, so it's safe to inspect/edit directly.
+4. Right-click the request → **Copy → Copy as cURL (bash)**.
+5. Paste the copied command into a **plain-text** editor (not TextEdit's default rich-text mode — that silently saves `.rtf` even with a `.sh` name and breaks the script; use `Format → Make Plain Text` first, or just use `nano` from the terminal) as a script, e.g. `fetch_espn.sh`.
+6. In that script, edit the `x-fantasy-filter` header's `"limit":50` up to something like `"limit":2000` so the response includes the full player pool, not just the top 50.
+7. The raw response from this endpoint is wrapped as `{"players": [...]}`, but the parser needs the bare array. Replace the command's `-o "data/espn/espn_player_projections_2026.json"` ending with a pipe into Python to unwrap it before saving:
+   ```
+   | python3 -c "import json,sys; json.dump(json.load(sys.stdin)['players'], open('data/espn/espn_player_projections_2026.json','w'))"
+   ```
+8. Run it: `bash fetch_espn.sh` from the repo root (relative path in step 7 depends on cwd).
+9. Verify: the file should be a flat list of ~1,000+ entries, each with a nested `player.stats` list containing an entry with `"id": "10<season>"` (e.g. `"102026"`). Spot-check a well-known player (e.g. Christian McCaffrey) has real stats. Running `python3 scripts/parsers/espn.py` directly prints a parsed count/position breakdown as a sanity check.
+10. **Delete the script file** (`fetch_espn.sh`) once done — it contains your session cookies. Never commit it.
 
 Manual copy/paste is the accepted approach for sources without a clean export or usable API; no parser-building planned for further sources beyond what's listed above.
 
