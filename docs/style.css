@@ -529,6 +529,178 @@ th.active.desc .sort-arrow::after { content: '↓'; opacity: 1; }
   color: var(--text-3);
 }
 
+/* ── COMPACT / MOBILE VIEW ──
+   Activated by toggling the .compact class on <table id="board"> (app.js).
+   Goal: shrink each row down to rank + name + flag + position so the board
+   fits a phone screen without horizontal scrolling. The columns this hides
+   (team, pos-rank, FPTS, VBD, the DRAFTED button) aren't gone - app.js moves
+   them into the existing tap-to-expand detail row instead. */
+
+/* The desktop table has `min-width: 640px` (see .board above) so its columns
+   never get too cramped. That min-width is exactly what would force
+   horizontal scrolling on a phone even after we hide columns - so drop it
+   back to 0 whenever compact mode is on. */
+.board.compact { min-width: 0; }
+
+/* Hide the FPTS / VBD / action columns (both header cells and body cells) -
+   their content still exists, just relocated into the detail row below. */
+.board.compact .col-pts,
+.board.compact .col-vbd,
+.board.compact .col-action,
+.board.compact .cell-pts,
+.board.compact .cell-vbd,
+.board.compact .cell-action {
+  display: none;
+}
+
+/* Hide the small team / pos-rank subtext under the player name in the main
+   row - it reappears (unhidden, styled separately) inside the detail row's
+   .compact-meta block below. */
+.board.compact .player-team,
+.board.compact .player-posrk {
+  display: none;
+}
+
+/* The desktop detail row indents 56px to line up under the player name
+   column, which wastes space on a narrow phone screen - tighten it back to
+   the table's normal 14px padding in compact mode. */
+.board.compact .detail-row td {
+  padding-left: 14px;
+}
+
+/* The DV/other flag dot is only 7px across (see .flag-dot) - too small to
+   reliably tap on a touchscreen, and it's one of the three things this view
+   exists to surface. Grow the actual hit area with padding + an equal
+   negative margin so the dot's on-screen SIZE doesn't change, only how far
+   a tap can land from dead-center and still register. */
+.board.compact .flag-indicator {
+  padding: 9px;
+  margin: -9px;
+}
+
+/* Team / pos-rank / FPTS / VBD, relocated into the detail row (compact mode
+   only). Small mono labels above each value, matching the source-breakdown
+   styling already used lower in this same detail row. */
+.compact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+.compact-stat {
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.compact-stat-label {
+  font-family: var(--font-display);
+  font-size: .68rem;
+  letter-spacing: .1em;
+  color: var(--text-2);
+}
+
+/* The relocated DRAFTED/UNDO button, sized comfortably for a thumb tap. */
+.compact-draft-btn {
+  margin-top: 2px;
+}
+
+/* ── MOBILE HEADER (FILTERS dropdown) ──
+   FILTERS is a phone-only button (app.js initHeaderControls()) that toggles
+   the .open class on #headerControls. At desktop widths, below, this button
+   stays display:none and #headerControls renders exactly as it always has -
+   so none of this affects the existing desktop layout. */
+.filters-toggle {
+  display: none;
+  font-family: var(--font-display);
+  font-size: .85rem;
+  letter-spacing: .08em;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  color: var(--text-2);
+  border-radius: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all .12s;
+}
+.filters-toggle.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* Phone-width breakpoint. 640px matches the desktop table's old min-width
+   (style.css .board), which is a reasonable line between "phone" and
+   "tablet/desktop" for this board. */
+@media (max-width: 640px) {
+  .header {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  /* Room is tight next to the FILTERS button, so the title/badge/league-select
+     group needs to be able to shrink and truncate rather than force the row
+     to overflow horizontally. */
+  .header-left {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 8px;
+  }
+  .title { font-size: 1.5rem; }
+  /* The season is already visible in the browser tab title (see
+     app.js updateTitle()), so it's safe to drop here to save space. */
+  .season-badge { display: none; }
+  .league-select {
+    min-width: 0;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .filters-toggle { display: inline-flex; align-items: center; }
+
+  /* The search/filters/toggles block becomes a dropdown panel anchored under
+     the header, instead of an always-visible row - this is what keeps the
+     sticky header down to one short row on a phone. `.header` is already
+     `position: sticky`, which (like `relative`/`absolute`) makes it a valid
+     containing block for this `position: absolute` panel, so no extra
+     positioning rule is needed on `.header` itself. */
+  .header-right {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+    box-shadow: 0 12px 24px rgba(0,0,0,.5);
+    z-index: 250;
+  }
+  .header-right.open { display: flex; }
+
+  .search-box { width: 100%; }
+  .search-box:focus { width: 100%; }  /* override the desktop grow-on-focus behavior; already full width */
+
+  .pos-filters { flex-wrap: wrap; }
+
+  /* Flip each toggle to the familiar mobile-settings layout - label on the
+     left, switch on the right - and stretch it to a full-width tap target
+     instead of the desktop's compact inline pairing. */
+  .header-right .hide-toggle {
+    width: 100%;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+  }
+
+  /* Guard against overflow if the stats/sync-status text is ever long enough
+     not to fit one row at phone width (e.g. a long "SYNC ERROR" state). */
+  .subbar { flex-wrap: wrap; row-gap: 4px; }
+}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--bg); }

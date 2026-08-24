@@ -38,6 +38,7 @@ let sortDir = 'asc';
 let posFilter = 'ALL';
 let hideDrafted = false;
 let excludeDV = false;
+let compactMode = false;   // COMPACT toggle: shrinks rows to rank/name/flag/pos
 let searchTerm = '';       // lowercased name-search text; '' = no search
 let expanded = new Set();  // player_ids whose source-breakdown row is open
 let activePopup = null;
@@ -235,6 +236,12 @@ function updateSubbar() {
 
 function render() {
   const tbody = document.getElementById('playerList');
+  const board = document.getElementById('board');
+  // Toggling this class is what actually drives the compact layout - the CSS
+  // rules scoped under `.board.compact` are what hide the team/pos-rank/FPTS/
+  // VBD/action columns and relax the table's min-width so it can shrink to
+  // phone width without a horizontal scrollbar. See style.css.
+  board.classList.toggle('compact', compactMode);
   const players = getVisible();
 
   if (!players.length) {
@@ -314,12 +321,45 @@ function render() {
         </div>`)
       .join('');
 
+    // In compact mode, the main row hides team/pos-rank/FPTS/VBD and the
+    // DRAFTED button (CSS, see .board.compact rules in style.css) to keep
+    // rows down to rank/name/flag/position. Nothing is lost, though - those
+    // fields + a working DRAFTED/UNDO button are added into this same
+    // tap-to-expand detail row that already shows the source breakdown, so a
+    // tap still reaches everything. In the normal (non-compact) desktop view
+    // this block is simply omitted, since those fields are already visible
+    // in the main row.
+    const compactExtraHtml = compactMode ? `
+      <div class="compact-meta">
+        <span class="compact-stat"><span class="compact-stat-label">TEAM</span>${p.team || '—'}</span>
+        <span class="compact-stat"><span class="compact-stat-label">POS RK</span>${p.pos_rank}</span>
+        <span class="compact-stat"><span class="compact-stat-label">FPTS</span>${p.projected_points.toFixed(1)}</span>
+        <span class="compact-stat"><span class="compact-stat-label">VBD</span>${p.vbd.toFixed(1)}</span>
+      </div>
+      <button class="${isDrafted ? 'btn-undo' : 'btn-drafted'} compact-draft-btn" data-id="${p.player_id}">
+        ${isDrafted ? 'UNDO' : 'DRAFTED'}
+      </button>
+    ` : '';
+
     dr.innerHTML = `
       <td colspan="6">
         <div class="detail-inner">
+          ${compactExtraHtml}
           <div class="sources-grid">${sourcesHtml}</div>
         </div>
       </td>`;
+
+    // The compact DRAFTED/UNDO button only exists in the DOM when compactMode
+    // is on (see compactExtraHtml above), so this query naturally no-ops in
+    // desktop mode - the main row's own button (wired earlier) already
+    // handles that case.
+    const compactBtn = dr.querySelector('.compact-draft-btn');
+    if (compactBtn) {
+      compactBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleDrafted(p.player_id);
+      });
+    }
 
     fragment.appendChild(dr);
   });
@@ -405,6 +445,11 @@ function initFilters() {
     render();
   });
 
+  document.getElementById('compactMode').addEventListener('change', e => {
+    compactMode = e.target.checked;
+    render();
+  });
+
   const searchBox = document.getElementById('searchBox');
   searchBox.addEventListener('input', e => {
     searchTerm = e.target.value.trim().toLowerCase();
@@ -426,6 +471,37 @@ document.addEventListener('click', e => {
     hidePopup();
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Mobile header: FILTERS dropdown
+// ─────────────────────────────────────────────────────────────────────────
+// #filtersToggle and the .open class it drives only do anything visually
+// below the phone-width media query in style.css - at desktop widths the
+// button is display:none and #headerControls is always visible, so this
+// wiring is harmless (just unreachable) on a full-size screen.
+function initHeaderControls() {
+  const filtersToggle = document.getElementById('filtersToggle');
+  const headerControls = document.getElementById('headerControls');
+
+  function setOpen(open) {
+    headerControls.classList.toggle('open', open);
+    filtersToggle.classList.toggle('active', open);
+    filtersToggle.setAttribute('aria-expanded', String(open));
+  }
+
+  filtersToggle.addEventListener('click', e => {
+    e.stopPropagation();  // don't let this bubble into the outside-click handler below
+    setOpen(!headerControls.classList.contains('open'));
+  });
+
+  // Tapping anywhere outside the open panel (and outside the toggle button
+  // itself, already handled above) closes it - standard dropdown behavior.
+  document.addEventListener('click', e => {
+    if (!headerControls.classList.contains('open')) return;
+    if (headerControls.contains(e.target)) return;
+    setOpen(false);
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // League selection
@@ -535,6 +611,7 @@ async function init() {
   initLeagueSelect();
   initSorting();
   initFilters();
+  initHeaderControls();
   render();
 
   await initFirebase();

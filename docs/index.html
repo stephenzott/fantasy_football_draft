@@ -20,7 +20,14 @@
            so the league list never gets hardcoded here. -->
       <select id="leagueSelect" class="league-select" aria-label="League"></select>
     </div>
-    <div class="header-right">
+    <!-- Mobile-only: hidden by default (display:none), shown by a media query
+         below a phone-width breakpoint. Toggling it opens/closes
+         #headerControls as a dropdown panel (see app.js initHeaderControls())
+         so the sticky header itself stays a single short row instead of
+         permanently occupying several rows of a phone screen. -->
+    <button type="button" id="filtersToggle" class="filters-toggle"
+            aria-expanded="false" aria-controls="headerControls">FILTERS</button>
+    <div class="header-right" id="headerControls">
       <!-- Name search: filters the visible rows by player name, ANDed with the
            position filter and toggles below (handled in app.js getVisible()). -->
       <input type="search" id="searchBox" class="search-box"
@@ -43,6 +50,15 @@
         <input type="checkbox" id="excludeDV">
         <span class="toggle-track"><span class="toggle-thumb"></span></span>
         <span class="toggle-label">DV LIST</span>
+      </label>
+      <!-- Compact/mobile view: shrinks each row down to rank + name + flag +
+           position. The columns it hides (team, pos-rank, FPTS, VBD, the
+           DRAFTED button) move into the existing tap-to-expand detail row
+           instead of disappearing - see app.js render(). -->
+      <label class="hide-toggle compact-toggle">
+        <input type="checkbox" id="compactMode">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">COMPACT</span>
       </label>
     </div>
   </header>
