@@ -162,7 +162,7 @@ Files live in `docs/`:
 - Sync-status pill (subbar): **SYNCED** (green) / **OFFLINE** (red) / **NOT SYNCED** (amber, when `firebase-config.js` is still the placeholder). Firebase is a **hard replacement** for localStorage — no localStorage fallback, so an outage is visible rather than silently saving locally.
 - Resilience: the Firebase SDK is loaded via lazy `import()` inside `initFirebase()`, and the board renders before Firebase comes up — so an unreachable CDN or missing config degrades to an unsynced board that still shows rankings (picks become ephemeral/in-memory), never a blank page.
 - "HIDE DRAFTED" toggle — removes drafted players from view
-- "DV LIST" toggle — removes any player with entries in their `flags` array
+- "DV LIST" toggle — shows all players with entries in their `flags` array
 - Click a row to expand per-source projection breakdown and flag details
 - Red dot indicator on player name for flagged players
 

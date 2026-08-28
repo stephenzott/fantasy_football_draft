@@ -37,7 +37,7 @@ let sortCol = 'rank';
 let sortDir = 'asc';
 let posFilter = 'ALL';
 let hideDrafted = false;
-let excludeDV = false;
+let dvOnly = false;       // DV LIST toggle: true = show ONLY flagged players
 let compactMode = false;   // COMPACT toggle: shrinks rows to rank/name/flag/pos
 let searchTerm = '';       // lowercased name-search text; '' = no search
 let expanded = new Set();  // player_ids whose source-breakdown row is open
@@ -212,7 +212,7 @@ function getVisible() {
     if (posFilter === 'FLEX' && !['RB', 'WR', 'TE'].includes(p.position)) return false;
     if (posFilter !== 'ALL' && posFilter !== 'FLEX' && p.position !== posFilter) return false;
     if (hideDrafted && drafted.has(p.player_id)) return false;
-    if (excludeDV && p.flags && p.flags.length > 0) return false;
+    if (dvOnly && (!p.flags || p.flags.length === 0)) return false;
     return true;
   });
 
@@ -441,7 +441,7 @@ function initFilters() {
   });
 
   document.getElementById('excludeDV').addEventListener('change', e => {
-    excludeDV = e.target.checked;
+    dvOnly = e.target.checked;
     render();
   });
 
