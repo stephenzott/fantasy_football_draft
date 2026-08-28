@@ -118,9 +118,34 @@ def parse_espn(filepath: str) -> list[dict]:
             "position": position,
             "projected_stats": projected_stats,
             "source": SOURCE_NAME,
+            # ESPN's own numeric player id, kept only so build.py can build
+            # data/espn/espn_id_map.json (espn_id -> our player_id) for the
+            # live draft poller. Not part of the common parser schema that
+            # merge.py groups on - merge.py ignores unknown keys.
+            "espn_id": player["id"],
         })
 
     return players
+
+
+def load_non_board_espn_ids(filepath: str) -> set[str]:
+    """Return the ESPN ids of every player in the raw snapshot whose
+    position isn't one parse_espn() keeps (kickers, D/ST, etc. - anything
+    outside POSITION_ID_MAP).
+
+    The live draft poller (scripts/poll_espn.py) uses this to tell "this
+    ESPN pick is a kicker/DST, which the board doesn't rank, so there's
+    nothing to map" apart from a genuine mapping miss on a QB/RB/WR/TE -
+    without it, every K/DST pick in a real draft would print as if it were
+    an unexplained gap in the id map.
+    """
+    with open(filepath, encoding="utf-8") as f:
+        raw_entries = json.load(f)
+    return {
+        str(entry["player"]["id"])
+        for entry in raw_entries
+        if entry["player"]["defaultPositionId"] not in POSITION_ID_MAP
+    }
 
 
 if __name__ == "__main__":

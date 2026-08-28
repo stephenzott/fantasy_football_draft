@@ -42,13 +42,13 @@ sys.path.insert(0, SCRIPTS_DIR)
 import yaml  # noqa: E402  (import after sys.path shim, intentionally)
 
 from scoring import load_scoring  # noqa: E402
-from merge import merge_sources, print_match_report  # noqa: E402
+from merge import merge_sources, print_match_report, normalize_name  # noqa: E402
 from aggregate import aggregate_league  # noqa: E402
 
 from parsers.fantasypros import parse_fantasypros  # noqa: E402
 from parsers.athletic import parse_athletic  # noqa: E402
 from parsers.cbs import parse_cbs  # noqa: E402
-from parsers.espn import parse_espn  # noqa: E402
+from parsers.espn import parse_espn, load_non_board_espn_ids  # noqa: E402
 from parsers.sleeper import parse_sleeper  # noqa: E402
 from parsers.flags_sheet import fetch_flags  # noqa: E402
 
@@ -60,12 +60,14 @@ def _abs(*parts: str) -> str:
     return os.path.join(REPO_ROOT, *parts)
 
 
-def parse_all_sources() -> list[list[dict]]:
-    """Run every scoring-eligible parser once and return their player lists.
+def parse_all_sources() -> dict[str, list[dict]]:
+    """Run every scoring-eligible parser once and return their player lists,
+    keyed by source name.
 
-    Each entry is one source's list of players in the common parser schema.
-    SI is not included here (see module docstring). Order doesn't matter -
-    merge.py groups by player, not by source position.
+    Each value is one source's list of players in the common parser schema.
+    SI is not included here (see module docstring). Keying by name (rather
+    than returning a bare list) lets build() reach back into the ESPN list
+    specifically afterward, to build the ESPN id map, without re-parsing.
     """
     print("Parsing sources...")
 
@@ -84,7 +86,49 @@ def parse_all_sources() -> list[list[dict]]:
     sleeper = parse_sleeper()  # live fetch from Sleeper's public API
     print(f"  sleeper:     {len(sleeper)} players (live)")
 
-    return [fantasypros, athletic, cbs, espn, sleeper]
+    return {
+        "fantasypros": fantasypros,
+        "athletic": athletic,
+        "cbs": cbs,
+        "espn": espn,
+        "sleeper": sleeper,
+    }
+
+
+def build_espn_id_map(espn_source: list[dict], merged: list[dict]) -> dict[str, str]:
+    """Build {espn_id: player_id} for the live draft poller.
+
+    ESPN's draft-pick feed (mDraftDetail) identifies players by ESPN's own
+    numeric id, not our player_id slug. The ESPN parser output carries that
+    numeric id per player (espn.py's espn_id field); the merged player list
+    carries the final player_id (minted in merge.py from the SAME name
+    normalizer). Running each ESPN row's name through normalize_name() gives
+    the match key that ties the two together.
+
+    A miss here (an ESPN player whose normalized name isn't in the merged
+    set - e.g. a practice-squad player no other source projects) is printed
+    but not fatal: poll_espn.py logs a mapping miss loudly if it ever sees
+    that player get drafted, and the manual DRAFTED button remains the
+    fallback either way.
+    """
+    player_id_by_key = {p["_match_key"]: p["player_id"] for p in merged}
+
+    id_map: dict[str, str] = {}
+    misses = []
+    for row in espn_source:
+        key = normalize_name(row["player_name"])
+        player_id = player_id_by_key.get(key)
+        if player_id is None:
+            misses.append(row["player_name"])
+            continue
+        id_map[str(row["espn_id"])] = player_id
+
+    print(f"  espn id map: {len(id_map)} mapped, {len(misses)} unmapped")
+    if misses:
+        print(f"    unmapped (no merged player for this name): {', '.join(misses[:20])}"
+              + (" ..." if len(misses) > 20 else ""))
+
+    return id_map
 
 
 def load_leagues() -> list[dict]:
@@ -95,7 +139,7 @@ def load_leagues() -> list[dict]:
 
 def build() -> None:
     # --- 1. Parse every source once (league-independent raw stats) ---
-    source_lists = parse_all_sources()
+    sources_by_name = parse_all_sources()
 
     # --- 2. Fetch conduct flags once (live from the Google Sheet) ---
     print("Fetching player flags...")
@@ -104,8 +148,28 @@ def build() -> None:
 
     # --- 3. Merge into one row per player (league-independent) ---
     print("Merging sources...")
-    merged = merge_sources(source_lists, flags)
-    print_match_report(merged, expected_sources=len(source_lists))
+    merged = merge_sources(list(sources_by_name.values()), flags)
+    print_match_report(merged, expected_sources=len(sources_by_name))
+
+    # --- 3b. Build the ESPN id map for the live draft poller ---
+    # Only as fresh as this build's ESPN snapshot/merge - re-running build.py
+    # before the draft refreshes it, same as players.json.
+    print("Building ESPN id map...")
+    espn_id_map = build_espn_id_map(sources_by_name["espn"], merged)
+    # Also record which ESPN ids are K/DST (positions the board doesn't
+    # rank, so they were never in sources_by_name["espn"] to begin with).
+    # The poller needs this to tell "kicker drafted, nothing to map" apart
+    # from a genuine mapping miss on a QB/RB/WR/TE - see espn.py.
+    non_board_ids = load_non_board_espn_ids(_abs("data", "espn", "espn_player_projections_2026.json"))
+    print(f"  espn non-board ids (K/DST, not ranked by the board): {len(non_board_ids)}")
+
+    id_map_path = _abs("data", "espn", "espn_id_map.json")
+    with open(id_map_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {"player_id_map": espn_id_map, "non_board_espn_ids": sorted(non_board_ids)},
+            f, indent=2, ensure_ascii=False,
+        )
+    print(f"  Wrote {id_map_path}")
 
     # --- 4. Per league: score + rank + VBD under that league's settings ---
     leagues = load_leagues()
