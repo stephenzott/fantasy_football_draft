@@ -22,6 +22,6 @@
   {
     "id": "league_5",
     "name": "LA Champions",
-    "hidden_from_selector": false
+    "hidden_from_selector": true
   }
 ]

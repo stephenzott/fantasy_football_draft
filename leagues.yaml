@@ -67,6 +67,10 @@ leagues:
     platform: sleeper
     draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
     scoring_file: scoring_league_5.yaml
+    # Kept out of the visible dropdown by request, but still fully built
+    # (players.json, scoring, VBD) and reachable directly via
+    # ?league=league_5 if needed.
+    hidden_from_selector: true
     roster:
       teams: 12
       starters:
