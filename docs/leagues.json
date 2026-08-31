@@ -1,22 +1,27 @@
 [
   {
     "id": "league_1",
-    "name": "DC Brewnited"
+    "name": "DC Brewnited",
+    "hidden_from_selector": false
   },
   {
     "id": "league_2",
-    "name": "The League"
+    "name": "The League",
+    "hidden_from_selector": false
   },
   {
     "id": "league_3",
-    "name": "Family League"
+    "name": "Family League",
+    "hidden_from_selector": true
   },
   {
     "id": "league_4",
-    "name": "Guillotine"
+    "name": "Guillotine",
+    "hidden_from_selector": false
   },
   {
     "id": "league_5",
-    "name": "LA Champions"
+    "name": "LA Champions",
+    "hidden_from_selector": false
   }
 ]

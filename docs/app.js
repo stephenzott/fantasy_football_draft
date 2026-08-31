@@ -550,7 +550,14 @@ function setActiveLeague(id) {
 
 function initLeagueSelect() {
   const sel = document.getElementById('leagueSelect');
-  sel.innerHTML = leagues.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  // hidden_from_selector leagues (e.g. one that's done drafting) are kept out
+  // of the dropdown's <option> list, but stay in the full `leagues` array -
+  // that's what init()'s validIds check uses, so ?league={id} still works
+  // as a direct link even though it won't appear here.
+  sel.innerHTML = leagues
+    .filter(l => !l.hidden_from_selector)
+    .map(l => `<option value="${l.id}">${l.name}</option>`)
+    .join('');
   sel.value = currentLeague;
 
   sel.addEventListener('change', e => {

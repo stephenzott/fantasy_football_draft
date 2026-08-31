@@ -190,9 +190,19 @@ def build() -> None:
     # --- 6. Write docs/leagues.json for the frontend's league selector ---
     # The frontend can't read leagues.yaml (it lives at the repo root, while
     # GitHub Pages only serves docs/), so we emit just the id + display name
-    # of each league here. leagues.yaml stays the single source of truth -
-    # this file is derived from it every build, never hand-edited.
-    leagues_out = [{"id": lg["id"], "name": lg["name"]} for lg in leagues]
+    # (+ optional hidden_from_selector flag) of each league here. leagues.yaml
+    # stays the single source of truth - this file is derived from it every
+    # build, never hand-edited. A league with hidden_from_selector: true is
+    # still included here (not dropped) so ?league={id} keeps working
+    # directly - the frontend is the one that skips it in the <select> list.
+    leagues_out = [
+        {
+            "id": lg["id"],
+            "name": lg["name"],
+            "hidden_from_selector": lg.get("hidden_from_selector", False),
+        }
+        for lg in leagues
+    ]
     leagues_path = _abs("docs", "leagues.json")
     with open(leagues_path, "w", encoding="utf-8") as f:
         json.dump(leagues_out, f, indent=2, ensure_ascii=False)

@@ -33,6 +33,10 @@ leagues:
     draft_mode: live
     espn_league_id: 37313507
     scoring_file: scoring_league_3.yaml
+    # Kept out of the visible dropdown by request, but still fully built
+    # (players.json, scoring, VBD) and reachable directly via
+    # ?league=league_3 if needed.
+    hidden_from_selector: true
     roster:
       teams: 12
       starters:
