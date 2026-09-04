@@ -1,0 +1,56 @@
+# Sleeper league (Chess League) - superflex (1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX,
+# 1 SUPERFLEX). Scoring values transcribed from in-app screenshots of
+# Sleeper's Scoring Settings pages (chess-league/IMG_9611-9616.PNG).
+#
+# Only passing/rushing/receiving drive the board (see scripts/scoring.py) -
+# those three sections below are fully captured and confirmed from the
+# screenshots. Kicking/defense/misc are kept for parity only, since the
+# board doesn't rank K/DST; per project decision, the Team Defense
+# "Points Allowed" bands beyond the 7-13 tier weren't screenshotted and are
+# left out below rather than guessed - zero functional impact either way.
+passing:
+  pass_yd: 0.04
+  pass_td: 4
+  pass_2pt: 2
+  pass_int: -1
+rushing:
+  rush_yd: 0.1
+  rush_td: 6
+  rush_2pt: 2
+receiving:
+  reception: 1
+  rec_yd: 0.1
+  rec_td: 6
+  rec_2pt: 2
+misc:
+  fumble_lost: -2        # offensive player who lost the fumble
+  fumble_recovery_td: 6  # any player returning a recovered fumble for a TD
+kicking:
+  pat_made: 1
+  fg_0_19: 3
+  fg_20_29: 3
+  fg_30_39: 3
+  fg_40_49: 4
+  fg_50_59: 5
+  fg_60_plus: 5   # Sleeper's UI only shows a single "50+" tier at 5; no separate 60+ band shown, so assumed same value
+  fg_missed: -1
+  pat_missed: -1
+defense:
+  interception: 2
+  fumble_recovery: 2
+  forced_fumble: 1
+  safety: 2
+  blocked_kick: 2
+  defense_td: 6
+  sack: 1
+  points_allowed:
+    "0": 10
+    "1-6": 7
+    "7-13": 4
+    # 14-20 through 35+ not captured in the screenshots (Team Defense tab
+    # was scrolled off before reaching them) - unused by the pipeline, so
+    # left incomplete rather than guessed.
+special_teams_player:
+  special_teams_player_td: 6
+  forced_fumble: 1
+  fumble_recovery: 1
