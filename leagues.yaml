@@ -80,7 +80,7 @@ leagues:
         TE: 1
         FLEX: 1
   - id: league_6
-    name: "Chess League"
+    name: "Ray Fu King Try Harder"
     platform: sleeper
     draft_mode: manual   # drafting offline, like league_5; Sleeper's API isn't used
     scoring_file: scoring_league_6.yaml

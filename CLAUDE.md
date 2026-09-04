@@ -131,7 +131,7 @@ leagues:
     draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
     scoring_file: scoring_league_5.yaml
   - id: league_6
-    name: "Chess League"
+    name: "Ray Fu King Try Harder"
     platform: sleeper
     draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
     scoring_file: scoring_league_6.yaml
@@ -373,7 +373,7 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 - `scoring_league_3.yaml` (Family League, ESPN) — full PPR, pass_int -2; FG 60+ = 6, no yards-allowed bonus, adds misc fumble-lost/fumble-recovery-TD
 - `scoring_league_4.yaml` (Guillotine, ESPN) — half-PPR, pass_int -1, no FG-missed penalty
 - `scoring_league_5.yaml` (LA Champions, Sleeper) — half-PPR; structurally different from the ESPN leagues (no yards-allowed bonus, adds fumble_lost penalty, separate special-teams-player scoring)
-- `scoring_league_6.yaml` (Chess League, Sleeper) — full PPR, pass_int -1; superflex roster (QB/RB/RB/WR/WR/TE/FLEX/SUPERFLEX), transcribed from in-app screenshots (`chess-league/IMG_9611-9616.PNG`, kept in the repo for reference); Team Defense "Points Allowed" bands past the 7-13 tier weren't captured and are left out of the yaml — zero functional impact since K/DST aren't scored by the pipeline
+- `scoring_league_6.yaml` (Ray Fu King Try Harder, Sleeper) — full PPR, pass_int -1; superflex roster (QB/RB/RB/WR/WR/TE/FLEX/SUPERFLEX), transcribed from in-app screenshots (`chess-league/IMG_9611-9616.PNG`, kept in the repo for reference); Team Defense "Points Allowed" bands past the 7-13 tier weren't captured and are left out of the yaml — zero functional impact since K/DST aren't scored by the pipeline
 
 ---
 
