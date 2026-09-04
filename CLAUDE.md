@@ -8,7 +8,7 @@ A custom fantasy football draft board that combines season projections from mult
 
 The board also surfaces player flags — concerns like domestic violence arrests or other off-field issues — alongside rankings.
 
-**Multi-league:** Supports 5 leagues from a single codebase — one switchable board, not 5 separate deployments. Every piece of draft-day state (drafted players, live sync) is scoped by `league_id` so two drafts can run simultaneously (e.g. two browser tabs, each pointed at a different league) without state bleeding across leagues. See "Multi-League Support" under Architecture.
+**Multi-league:** Supports 6 leagues from a single codebase — one switchable board, not 6 separate deployments. Every piece of draft-day state (drafted players, live sync) is scoped by `league_id` so two drafts can run simultaneously (e.g. two browser tabs, each pointed at a different league) without state bleeding across leagues. See "Multi-League Support" under Architecture.
 
 ---
 
@@ -79,7 +79,7 @@ Files are dropped into `data/` and must be parseable by the pipeline without man
 
 ### 3. Multi-League Support — not yet built
 
-**5 leagues total:**
+**6 leagues total:**
 | League | Platform | Draft mode |
 |---|---|---|
 | League 1 | ESPN (private) | Live — poll ESPN's unofficial API + manual fallback |
@@ -87,8 +87,9 @@ Files are dropped into `data/` and must be parseable by the pipeline without man
 | League 3 | ESPN (private) | Live — poll ESPN's unofficial API + manual fallback |
 | League 4 | ESPN (private) | Live — poll ESPN's unofficial API + manual fallback |
 | League 5 | Sleeper | Manual only — drafting offline, so Sleeper's API isn't in play despite being available |
+| League 6 | Sleeper | Manual only — superflex format; drafting offline, so Sleeper's API isn't in play despite being available |
 
-All 5 leagues are on a real platform (`espn` or `sleeper`) — there is no `platform: offline`. Whether a league gets live polling is controlled entirely by `draft_mode`, not by platform. 4 of the 5 leagues are ESPN; only 3 of those 4 are polled live (League 2's ESPN draft happens offline).
+All 6 leagues are on a real platform (`espn` or `sleeper`) — there is no `platform: offline`. Whether a league gets live polling is controlled entirely by `draft_mode`, not by platform. 4 of the 6 leagues are ESPN; only 3 of those 4 are polled live (League 2's ESPN draft happens offline). Of the 2 Sleeper leagues, neither is polled — both draft offline, so Sleeper's live-draft API isn't used by either (League 6, despite the name, doesn't get special polling treatment either).
 
 **Design requirements:**
 - One board (`index.html`/`app.js`), league selected via URL param (e.g. `?league=espn_league_a`) — not in-memory-only state, so two tabs can independently point at two different leagues at once.
@@ -97,7 +98,7 @@ All 5 leagues are on a real platform (`espn` or `sleeper`) — there is no `plat
 - ESPN private leagues require `espn_s2` and `SWID` auth cookies to hit the API. **Decision:** the ESPN-polling script runs locally on Stephen's laptop during the draft (not a cloud function), so cookies live in a local, gitignored `.env` file (`ESPN_S2=...`, `SWID=...`) and never touch the repo, Firebase, or the frontend.
 
 ### 4. Leagues Config — built
-`leagues.yaml` at the repo root is the single source of truth for the 5 leagues. `id` is a stable slug used in file names, URL params (`?league=`), and Firebase paths — it never changes even if the league's real-world name does. `name` is the human-readable label shown in the frontend's league selector.
+`leagues.yaml` at the repo root is the single source of truth for the 6 leagues. `id` is a stable slug used in file names, URL params (`?league=`), and Firebase paths — it never changes even if the league's real-world name does. `name` is the human-readable label shown in the frontend's league selector.
 ```yaml
 leagues:
   - id: league_1
@@ -129,8 +130,29 @@ leagues:
     platform: sleeper
     draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
     scoring_file: scoring_league_5.yaml
+  - id: league_6
+    name: "Chess League"
+    platform: sleeper
+    draft_mode: manual   # drafting offline; Sleeper's API isn't used despite being available
+    scoring_file: scoring_league_6.yaml
+    vbd_baseline:        # optional per-league override; see "VBD Baseline Overrides" below
+      qb: 22
+    roster:
+      teams: 12
+      starters:
+        QB: 1
+        RB: 2
+        WR: 2
+        TE: 1
+        FLEX: 1
+        SUPERFLEX: 1    # extra slot, any position eligible; in practice almost always started with a 2nd QB
 ```
 The frontend's league selector, the build pipeline, and the ESPN poller should all read from this one file rather than hardcoding league details in multiple places.
+
+#### VBD Baseline Overrides (superflex)
+Every league's `roster` block (`teams` + `starters`) drives `scripts/aggregate.py`'s VBD baseline formula: `baseline_rank(pos) = teams × starters[pos] + teams × starters.FLEX × FLEX_SPLIT[pos]`. That formula assumes a position's dedicated starter count is fixed and known (e.g. QB:1 everywhere). It breaks for a superflex league's `SUPERFLEX` slot, which can be filled by a 2nd QB — there's no fixed "dedicated QB starters" count to plug in, since it depends how often each team's manager chooses to start a 2nd QB there instead of a skill-position player.
+
+The fix, scoped to QB only (RB/WR/TE `FLEX_SPLIT` math is untouched): an optional `vbd_baseline` block per league in `leagues.yaml` (e.g. `vbd_baseline: {qb: 22}`), read by `compute_baselines()` in `scripts/aggregate.py`. When present, the configured rank is used directly for that position instead of the formula; when absent (all 5 other leagues), behavior is unchanged. League 6's `qb: 22` was chosen by building `players.json` once, then inspecting the actual QB point dropoff around ranks 15-25 (gradual, ~3-5 pts/rank — not a sharp cliff, so the exact rank isn't especially sensitive) and confirming RB/WR/TE baseline ranks were unaffected. See `chess-league/superflex-qb-baseline.md` for the original design writeup.
 
 ### 5. ESPN Live Draft Polling — not yet built
 - For leagues with `platform: espn` AND `draft_mode: live` only (3 of the 5 leagues). Polls ESPN's unofficial API (`https://fantasy.espn.com/apis/v3/games/ffl/seasons/{season}/segments/0/leagues/{league_id}?view=mDraftDetail`) on an interval during the draft.
@@ -271,10 +293,10 @@ Only the `passing`, `rushing`, and `receiving` sections are used by the pipeline
 
 ## Draft Day Workflow
 
-1. Run `python scripts/build.py` the morning of the draft to regenerate `players.json` for all 5 leagues (reads `leagues.yaml` + each league's `scoring.yaml`)
+1. Run `python scripts/build.py` the morning of the draft to regenerate `players.json` for all 6 leagues (reads `leagues.yaml` + each league's `scoring.yaml`)
 2. Open `docs/index.html` (or the GitHub Pages URL), select the correct league from the league selector — the URL updates to `?league={league_id}`
 3. For the 3 live-draft ESPN leagues: start the local ESPN-polling script (reads cookies from local `.env`) before the draft begins so picks auto-sync to Firebase
-4. For the 2 manual-draft leagues (League 2/ESPN drafted offline, League 5/Sleeper): no polling script — mark players manually as they're drafted
+4. For the 3 manual-draft leagues (League 2/ESPN drafted offline, League 5/Sleeper, League 6/Sleeper): no polling script — mark players manually as they're drafted
 5. Optionally toggle "DV LIST" to hide flagged players
 6. As players are taken, click "DRAFTED" (manual leagues) or let the poller auto-mark them (ESPN leagues) — both write to the same Firebase path, `/leagues/{league_id}/drafted/{player_id}`, so manual clicks work as a fallback on ESPN leagues too
 7. Toggle "HIDE DRAFTED" to clear them from view and focus on remaining players
@@ -313,8 +335,8 @@ cd docs && python -m http.server 8000
 - `scripts/` — Python data pipeline scripts
 - `scripts/parsers/` — one parser per source, each normalizing to the common schema
 - `flags/` — player flag source data (joined onto players during pipeline build)
-- `leagues.yaml` — single source of truth for the 5 leagues (platform, draft mode, ESPN league ID, scoring file)
-- `scoring_{league_id}.yaml` — one per league (5 total), not a single shared `scoring.yaml`
+- `leagues.yaml` — single source of truth for the 6 leagues (platform, draft mode, ESPN league ID, scoring file)
+- `scoring_{league_id}.yaml` — one per league (6 total), not a single shared `scoring.yaml`
 - `.env` (gitignored, local only) — ESPN `espn_s2`/`SWID` cookies for the local polling script
 
 When adding a new ranking source, add a dedicated parser in `scripts/parsers/` that normalizes it to the common schema before merging.
@@ -335,9 +357,9 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 - Multi-league frontend — league `<select>` populated from `docs/leagues.json`, active league via `?league=` (bad/missing param falls back to first league + rewrites URL), drafted state scoped per league and keyed by `player_id`, per-league tab titles. Combined `players.json` fetched once and re-indexed in memory on switch. Verified in-browser: two-tab isolation and in-tab switching keep drafted sets separate; same WR shows the expected full-PPR vs no-PPR point gap per league.
 - `scripts/scoring.py` — converts a player's raw `projected_stats` to fantasy points under one league's scoring; maps `reception` (scoring key) → `rec` (parser stat key) explicitly, and raises on any unmapped scoring key. 2pt conversions + `fumble_lost` intentionally unscored in v1 (only some sources emit them; scoring them would make the same player differ across leagues for non-scoring reasons).
 - `scripts/merge.py` — normalizes names (accent/punctuation/suffix stripping + a `NAME_ALIASES` table for nicknames), mints a Firebase-safe `player_id`, merges the 5 scoring-eligible sources into one row per player (majority-vote team/position), joins flags, and prints a **match report** (source-count per player; 1-source players flagged as likely normalization misses). SI excluded — its combined-only stats can't be scored.
-- `scripts/aggregate.py` — per league: scores each source then averages → `projected_points`, ranks overall + positionally, computes VBD vs a positional baseline. Baseline rank = `teams × starters[pos] + teams × FLEX × FLEX_SPLIT[pos]` with `FLEX_SPLIT = {RB:0.50, WR:0.40, TE:0.10}`.
+- `scripts/aggregate.py` — per league: scores each source then averages → `projected_points`, ranks overall + positionally, computes VBD vs a positional baseline. Baseline rank = `teams × starters[pos] + teams × FLEX × FLEX_SPLIT[pos]` with `FLEX_SPLIT = {RB:0.50, WR:0.40, TE:0.10}`. A league's optional `vbd_baseline` block (currently just League 6's `qb: 22`) overrides that formula for a given position instead of computing it — see "VBD Baseline Overrides" under Multi-League Support.
 - `scripts/build.py` — orchestrates: parse 6 sources + flags once (network fetches happen once, outside the per-league loop), merge, then per league score/rank/VBD → combined `docs/players.json`. Run `python scripts/build.py`. **Requires network** (Sleeper + flags sheet fetch live).
-- `leagues.yaml` `roster` blocks — per-league `teams` + `starters` (QB/RB/WR/TE/FLEX), the source for VBD baselines.
+- `leagues.yaml` `roster` blocks — per-league `teams` + `starters` (QB/RB/WR/TE/FLEX, plus `SUPERFLEX` for League 6), the source for VBD baselines.
 - `scripts/parsers/flags_sheet.py` — fetches flags live from Google Sheet at build time
 - `scripts/parsers/athletic.py` — parses The Athletic's 4-block side-by-side CSV export
 - `scripts/parsers/fantasypros.py` — parses FantasyPros' 4 per-position CSV exports (QB/RB/WR/TE; K/DST/FLX intentionally not parsed)
@@ -345,12 +367,13 @@ When adding a new ranking source, add a dedicated parser in `scripts/parsers/` t
 - `scripts/parsers/cbs.py` — parses CBS's flat combined CSV; FB position folded into RB
 - `scripts/parsers/espn.py` — parses a saved ESPN API JSON snapshot (see Data Sources above for how it's obtained); stat/team ID mappings derived empirically, not from docs
 - `scripts/parsers/sleeper.py` — fetches live from Sleeper's public projections API (no manual file); human-readable stat field names, no ID-mapping needed
-- `leagues.yaml` — single source of truth for all 5 leagues (id, name, platform, draft_mode, espn_league_id, scoring_file)
+- `leagues.yaml` — single source of truth for all 6 leagues (id, name, platform, draft_mode, espn_league_id, scoring_file)
 - `scoring_league_1.yaml` (DC Brewnited, ESPN) — full PPR, pass_int -2
 - `scoring_league_2.yaml` (The League, ESPN) — standard/no PPR, pass_int -2
 - `scoring_league_3.yaml` (Family League, ESPN) — full PPR, pass_int -2; FG 60+ = 6, no yards-allowed bonus, adds misc fumble-lost/fumble-recovery-TD
 - `scoring_league_4.yaml` (Guillotine, ESPN) — half-PPR, pass_int -1, no FG-missed penalty
 - `scoring_league_5.yaml` (LA Champions, Sleeper) — half-PPR; structurally different from the ESPN leagues (no yards-allowed bonus, adds fumble_lost penalty, separate special-teams-player scoring)
+- `scoring_league_6.yaml` (Chess League, Sleeper) — full PPR, pass_int -1; superflex roster (QB/RB/RB/WR/WR/TE/FLEX/SUPERFLEX), transcribed from in-app screenshots (`chess-league/IMG_9611-9616.PNG`, kept in the repo for reference); Team Defense "Points Allowed" bands past the 7-13 tier weren't captured and are left out of the yaml — zero functional impact since K/DST aren't scored by the pipeline
 
 ---
 

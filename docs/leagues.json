@@ -23,5 +23,10 @@
     "id": "league_5",
     "name": "LA Champions",
     "hidden_from_selector": true
+  },
+  {
+    "id": "league_6",
+    "name": "Chess League",
+    "hidden_from_selector": false
   }
 ]

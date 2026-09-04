@@ -177,7 +177,9 @@ def build() -> None:
     for league in leagues:
         league_id = league["id"]
         scoring = load_scoring(_abs(league["scoring_file"]))
-        players = aggregate_league(merged, scoring, league["roster"])
+        players = aggregate_league(
+            merged, scoring, league["roster"], league.get("vbd_baseline")
+        )
         output[league_id] = players
         print(f"  {league_id} ({league['name']}): {len(players)} players ranked")
 

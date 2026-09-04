@@ -79,3 +79,27 @@ leagues:
         WR: 2
         TE: 1
         FLEX: 1
+  - id: league_6
+    name: "Chess League"
+    platform: sleeper
+    draft_mode: manual   # drafting offline, like league_5; Sleeper's API isn't used
+    scoring_file: scoring_league_6.yaml
+    # Superflex league: the extra SUPERFLEX slot can start a 2nd QB, which
+    # pushes QB replacement level much deeper than the other leagues' single
+    # QB slot. vbd_baseline.qb is an explicit override read by
+    # scripts/aggregate.py's compute_baselines() instead of the normal
+    # teams*starters.QB formula - see superflex-qb-baseline.md for the design.
+    # 22 is a placeholder; sanity-check it against real projected points
+    # once players.json is built (look for a meaningful QB VBD bump around
+    # rank 15-25 and confirm RB/WR/TE VBD is unaffected).
+    vbd_baseline:
+      qb: 22
+    roster:
+      teams: 12
+      starters:
+        QB: 1
+        RB: 2
+        WR: 2
+        TE: 1
+        FLEX: 1
+        SUPERFLEX: 1

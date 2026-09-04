@@ -35,7 +35,7 @@ FLEX_SPLIT = {"RB": 0.50, "WR": 0.40, "TE": 0.10}
 POSITIONS = ("QB", "RB", "WR", "TE")
 
 
-def compute_baselines(roster: dict) -> dict[str, int]:
+def compute_baselines(roster: dict, vbd_baseline_overrides: dict | None = None) -> dict[str, int]:
     """Given a league's roster block from leagues.yaml, return the baseline
     RANK at each position - i.e. "the Nth-best QB/RB/WR/TE is replacement
     level for this league."
@@ -56,13 +56,28 @@ def compute_baselines(roster: dict) -> dict[str, int]:
     Example (12-team, 2 RB + 1 FLEX): 12*2 + 12*1*0.50 = 24 + 6 = 30, so
     the 30th-ranked RB is replacement level and RB VBD is measured against
     that player's projected points.
+
+    `vbd_baseline_overrides` is an optional per-league escape hatch (the
+    `vbd_baseline` block in leagues.yaml, e.g. `{"qb": 22}`) for positions
+    where the formula above doesn't apply - namely a superflex league's QB
+    slot, which can be filled by a 2nd QB and so has no fixed number of
+    "dedicated" starters the way QB:1 does elsewhere. When a position has an
+    override, its configured rank is used directly and the formula is
+    skipped for that position only; every other position (and every league
+    that omits vbd_baseline entirely) is completely unaffected. See
+    superflex-qb-baseline.md for the full design writeup.
     """
     teams = roster["teams"]
     starters = roster["starters"]
     flex_slots = starters.get("FLEX", 0)
+    overrides = vbd_baseline_overrides or {}
 
     baselines: dict[str, int] = {}
     for pos in POSITIONS:
+        override_rank = overrides.get(pos.lower())
+        if override_rank is not None:
+            baselines[pos] = override_rank
+            continue
         dedicated = teams * starters.get(pos, 0)
         flex_share = teams * flex_slots * FLEX_SPLIT.get(pos, 0.0)
         # round() gives the nearest integer rank; max(..,1) guards the
@@ -71,19 +86,27 @@ def compute_baselines(roster: dict) -> dict[str, int]:
     return baselines
 
 
-def aggregate_league(merged: list[dict], scoring: dict[str, float], roster: dict) -> list[dict]:
+def aggregate_league(
+    merged: list[dict],
+    scoring: dict[str, float],
+    roster: dict,
+    vbd_baseline_overrides: dict | None = None,
+) -> list[dict]:
     """Produce the final ranked player rows for one league.
 
     `merged` are the league-independent merged players (from merge.py),
     each carrying per_source_stats. `scoring` is that league's flattened
     scoring dict (from scoring.load_scoring). `roster` is the league's
-    roster block from leagues.yaml.
+    roster block from leagues.yaml. `vbd_baseline_overrides` is that
+    league's optional `vbd_baseline` block from leagues.yaml (see
+    compute_baselines' docstring) - omitted/None for every league that
+    doesn't need one.
 
     Returns a list of player dicts in the board's players.json schema:
       {name, team, position, rank, pos_rank, projected_points, vbd,
        sources, flags, injuries, player_id}
     """
-    baselines = compute_baselines(roster)
+    baselines = compute_baselines(roster, vbd_baseline_overrides)
 
     # --- Step 1: score each source, average into projected_points ---
     scored: list[dict] = []
